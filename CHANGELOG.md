@@ -2,6 +2,15 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [0.2.0] — 2026-09-09
+
+### Añadido
+- `proyecto info`: datos del proyecto + etapas con IDs (N2 2.4 ✅).
+- `tarea get`: campos según config + `chatter_reciente`; inexistente → exit 1 limpio.
+- `tarea list` con filtros `--etapa`, `--estado`, `--limite` (N2 2.5 ✅).
+- `coincidir_etapa()` extraída como función pura; `id_de_etapa()` con error que lista las válidas.
+- Tests N1 de `coincidir_etapa`/`id_de_etapa`/`campos_tarea`.
+
 ## [0.1.0] — 2026-09-09
 
 ### Añadido

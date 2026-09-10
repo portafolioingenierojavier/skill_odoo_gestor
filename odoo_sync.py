@@ -117,6 +117,38 @@ def cargar_config():
     return json.loads(f.read_text(encoding="utf-8"))
 
 
+def coincidir_etapa(etapas, nombre):
+    """Empareja un nombre de etapa contra una lista (case-insensitive, strip)."""
+    objetivo = nombre.strip().lower()
+    for etapa in etapas:
+        if etapa["name"].strip().lower() == objetivo:
+            return etapa
+    return None
+
+
+def id_de_etapa(odoo, cfg, nombre):
+    pid = cfg["proyecto_id"]
+    etapas = odoo.buscar("project.task.type", [["project_ids", "in", [pid]]],
+                         ["id", "name", "sequence"], orden="sequence")
+    etapa = coincidir_etapa(etapas, nombre)
+    if etapa:
+        return etapa
+    error(f"La etapa «{nombre}» no existe. Disponibles: "
+          + ", ".join(e["name"] for e in etapas))
+
+
+def campos_tarea(cfg):
+    campos = ["id", "name", "stage_id", "description", "date_deadline"]
+    c = cfg.get("campos", {})
+    if c.get("planned_hours"):
+        campos.append("planned_hours")
+    if c.get("state"):
+        campos.append("state")
+    if c.get("asignacion"):
+        campos.append(c["asignacion"])
+    return campos
+
+
 def texto_o_archivo(valor):
     """Texto directo o '@archivo.md' para textos largos (evita escaping de bash)."""
     if valor and valor.startswith("@"):
@@ -229,6 +261,49 @@ def cmd_doctor(args):
     ok(resultado)
 
 
+def conexion_y_config():
+    return Odoo(), cargar_config()
+
+
+def cmd_proyecto_info(_):
+    odoo, cfg = conexion_y_config()
+    pid = cfg["proyecto_id"]
+    datos = odoo.ejec("project.project", "read", [pid],
+                      {"fields": ["name", "date_start", "date", "active"]})[0]
+    etapas = odoo.buscar("project.task.type", [["project_ids", "in", [pid]]],
+                         ["id", "name", "fold", "sequence"], orden="sequence")
+    ok({"proyecto": datos, "etapas": etapas})
+
+
+def cmd_tarea_get(args):
+    odoo, cfg = conexion_y_config()
+    tareas = odoo.ejec("project.task", "read", [args.id],
+                       {"fields": campos_tarea(cfg)})
+    if not tareas:
+        error(f"No existe (o no puedes ver) la tarea {args.id}")
+    mensajes = odoo.buscar("mail.message",
+                           [["model", "=", "project.task"],
+                            ["res_id", "=", args.id]],
+                           ["date", "author_id", "body"],
+                           limite=10, orden="date desc")
+    ok({"tarea": tareas[0], "chatter_reciente": mensajes})
+
+
+def cmd_tarea_list(args):
+    odoo, cfg = conexion_y_config()
+    dominio = [["project_id", "=", cfg["proyecto_id"]]]
+    if args.etapa:
+        dominio.append(["stage_id", "=", id_de_etapa(odoo, cfg, args.etapa)["id"]])
+    if args.estado:
+        if not cfg.get("estados"):
+            error("Esta instancia no expone state: filtra por --etapa")
+        dominio.append(["state", "=", ESTADOS[args.estado]])
+    campos = ["id", "name", "stage_id"]
+    if cfg.get("campos", {}).get("state"):
+        campos.append("state")
+    ok({"tareas": odoo.buscar("project.task", dominio, campos, limite=args.limite)})
+
+
 # ------------------------------------------------------------------ entrada
 
 def construir_parser():
@@ -243,6 +318,18 @@ def construir_parser():
     doc = sub.add_parser("doctor", help="Diagnóstico de conexión, campos y módulos")
     doc.add_argument("--proyecto", type=int,
                      help="ID del proyecto: además escribe .ia/config.json")
+
+    pro = sub.add_parser("proyecto")
+    pro.add_subparsers(dest="accion", required=True).add_parser("info")
+
+    tar = sub.add_parser("tarea")
+    t = tar.add_subparsers(dest="accion", required=True)
+    g = t.add_parser("get")
+    g.add_argument("id", type=int)
+    l = t.add_parser("list")
+    l.add_argument("--etapa")
+    l.add_argument("--estado", choices=list(ESTADOS))
+    l.add_argument("--limite", type=int, default=50)
     return p
 
 
@@ -252,6 +339,10 @@ def main():
         cmd_now(args)
     elif args.grupo == "doctor":
         cmd_doctor(args)
+    elif args.grupo == "proyecto":
+        cmd_proyecto_info(args)
+    elif args.grupo == "tarea":
+        {"get": cmd_tarea_get, "list": cmd_tarea_list}[args.accion](args)
 
 
 if __name__ == "__main__":

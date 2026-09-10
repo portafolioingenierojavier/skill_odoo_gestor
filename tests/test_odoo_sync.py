@@ -273,6 +273,77 @@ class TestConstruirConfig(unittest.TestCase):
         self.assertEqual(cfg["modo_horas"], "solo-registro")
 
 
+class TestCoincidirEtapa(unittest.TestCase):
+    """F4-T3: coincidir_etapa() pura e id_de_etapa()."""
+
+    ETAPAS = [{"id": 27, "name": "Backlog", "sequence": 1},
+              {"id": 31, "name": "Revisión", "sequence": 5}]
+
+    def test_exacta(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.coincidir_etapa(self.ETAPAS, "Backlog")["id"], 27)
+
+    def test_mayusculas_y_espacios(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.coincidir_etapa(self.ETAPAS, "  REVISIÓN " )["id"], 31)
+
+    def test_no_existe_devuelve_none(self):
+        mod = cargar_modulo()
+        self.assertIsNone(mod.coincidir_etapa(self.ETAPAS, "NoExiste"))
+
+    def test_id_de_etapa_devuelve_ficha(self):
+        mod = cargar_modulo()
+        class FakeOdoo:
+            def buscar(self, modelo, dominio, campos, limite=100, orden=None):
+                return TestCoincidirEtapa.ETAPAS
+        ficha = mod.id_de_etapa(FakeOdoo(), {"proyecto_id": 7}, "revisión")
+        self.assertEqual(ficha["id"], 31)
+
+    def test_id_de_etapa_inexistente_error_con_lista(self):
+        mod = cargar_modulo()
+        class FakeOdoo:
+            def buscar(self, modelo, dominio, campos, limite=100, orden=None):
+                return TestCoincidirEtapa.ETAPAS
+        captured = {}
+        original = mod.error
+        def fake_error(mensaje, detalle=""):
+            captured["mensaje"] = mensaje
+            raise SystemExit(1)
+        mod.error = fake_error
+        try:
+            with self.assertRaises(SystemExit):
+                mod.id_de_etapa(FakeOdoo(), {"proyecto_id": 7}, "NoExiste")
+        finally:
+            mod.error = original
+        self.assertIn("NoExiste", captured["mensaje"])
+        self.assertIn("Backlog", captured["mensaje"])
+        self.assertIn("Revisión", captured["mensaje"])
+
+
+class TestCamposTarea(unittest.TestCase):
+    """F4-T1: campos_tarea()."""
+
+    def test_base_y_condicionales(self):
+        mod = cargar_modulo()
+        cfg = {"campos": {"asignacion": "user_ids", "planned_hours": False,
+                          "state": True, "tickets": []}}
+        campos = mod.campos_tarea(cfg)
+        for obligatorio in ("id", "name", "stage_id", "description",
+                            "date_deadline", "state", "user_ids"):
+            self.assertIn(obligatorio, campos)
+        self.assertNotIn("planned_hours", campos)
+        self.assertNotIn("project_id", campos)
+
+    def test_campos_condicionales_presentes(self):
+        mod = cargar_modulo()
+        cfg = {"campos": {"asignacion": "user_id", "planned_hours": True,
+                          "state": False, "tickets": []}}
+        campos = mod.campos_tarea(cfg)
+        self.assertIn("planned_hours", campos)
+        self.assertIn("user_id", campos)
+        self.assertNotIn("state", campos)
+
+
 class TestRegistrarActividad(unittest.TestCase):
     """F2-T6: registrar_actividad()."""
 
