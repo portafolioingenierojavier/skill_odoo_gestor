@@ -55,6 +55,15 @@ PATRON_ENTRADA = re.compile(
     r"(?:\s*\|\s*interrupciones:(?P<int>\w+))?\s*$"
 )
 
+PATRON_ENTRADA = re.compile(
+    r"^##\s*(?P<fecha>\S+)\s*\|\s*(?P<tipo>[A-Za-z]+)\s*\|\s*(?P<ref>.*?)\s*\|\s*"
+    r"estimado_h:(?P<est>[\d.]+)\s*\|\s*real_h:(?P<real>[\d.]+)"
+    r"(?:\s*\|\s*invertido_h:(?P<inv>[\d.]+))?"
+    r"(?:\s*\|\s*archivos:(?P<arch>\d+))?"
+    r"(?:\s*\|\s*lineas:(?P<lin>\d+))?"
+    r"(?:\s*\|\s*interrupciones:(?P<int>\w+))?\s*$"
+)
+
 # ------------------------------------------------------------------ utilidades
 
 def ok(data, codigo=0):
@@ -175,6 +184,15 @@ def parsear_set(pares):
         else:
             resultado[campo] = texto_o_archivo(valor)
     return resultado
+
+
+def archivo_calibracion(modelo):
+    seguro = re.sub(r"[^a-z0-9._-]+", "-", modelo.strip().lower()).strip("-")
+    if not seguro:
+        error("Indica un nombre de modelo válido (--modelo)")
+    carpeta = carpeta_ia() / "calibracion"
+    carpeta.mkdir(exist_ok=True)
+    return carpeta / f"{seguro}.md"
 
 
 def texto_o_archivo(valor):
@@ -415,6 +433,57 @@ def cmd_chatter_post(args):
     ok({"id": args.id, "publicado": True, "caracteres": len(cuerpo)})
 
 
+def cmd_cal_stats(args):
+    ruta = archivo_calibracion(args.modelo)
+    entradas = []
+    if ruta.exists():
+        entradas = [m.groupdict() for m in
+                    (PATRON_ENTRADA.match(l)
+                     for l in ruta.read_text(encoding="utf-8").splitlines()) if m]
+    if not entradas:
+        ok({"archivo": str(ruta), "tareas": 0, "ratio_global": None,
+            "aviso": "Sin histórico: estima en crudo y sé conservador (al alza)"})
+    ratios, por_tipo = [], {}
+    for e in entradas:
+        estimado = float(e["est"])
+        base = float(e["inv"] or e["real"])
+        if estimado <= 0:
+            continue
+        ratio = base / estimado
+        ratios.append(ratio)
+        por_tipo.setdefault(e["tipo"], []).append(ratio)
+    datos = {"archivo": str(ruta), "tareas": len(ratios),
+             "ratio_global": round(sum(ratios) / len(ratios), 2),
+             "por_tipo": {t: {"tareas": len(v), "ratio": round(sum(v) / len(v), 2)}
+                          for t, v in por_tipo.items()}}
+    if len(ratios) < 5:
+        datos["aviso"] = "Histórico corto (<5): calibración preliminar"
+    ok(datos)
+
+
+def cmd_cal_registrar(args):
+    ruta = archivo_calibracion(args.modelo)
+    if not ruta.exists():
+        ruta.write_text(f"# Calibración de tiempos — {args.modelo}\n"
+                        f"# Ratios: odoo_sync.py calibracion stats --modelo {args.modelo}\n\n",
+                        encoding="utf-8")
+    interrupciones = "si" if args.interrupciones else "no"
+    linea = (f"## {dt.datetime.now().isoformat(timespec='minutes')} | {args.tipo} | "
+             f"{args.ref} | estimado_h:{args.estimado} | real_h:{args.real}")
+    if args.invertido is not None:
+        linea += f" | invertido_h:{args.invertido}"
+    if args.archivos is not None:
+        linea += f" | archivos:{args.archivos}"
+    if args.lineas is not None:
+        linea += f" | lineas:{args.lineas}"
+    linea += f" | interrupciones:{interrupciones}\n"
+    if args.notas:
+        linea += "\n" + texto_o_archivo(args.notas) + "\n"
+    with ruta.open("a", encoding="utf-8") as f:
+        f.write("\n" + linea)
+    ok({"archivo": str(ruta), "registrado": True})
+
+
 def cmd_horas(args):
     odoo, cfg = conexion_y_config()
     if cfg.get("modo_horas") != "timesheet":
@@ -535,6 +604,22 @@ def construir_parser():
     tv.add_argument("--ticket", type=int, required=True)
     tv.add_argument("--campo")
     tv.add_argument("--confirm", action="store_true")
+
+    cal = sub.add_parser("calibracion")
+    k = cal.add_subparsers(dest="accion", required=True)
+    ks = k.add_parser("stats")
+    ks.add_argument("--modelo", required=True)
+    kr = k.add_parser("registrar")
+    kr.add_argument("--modelo", required=True)
+    kr.add_argument("--tipo", required=True, choices=list(TIPOS_VALIDOS))
+    kr.add_argument("--ref", required=True)
+    kr.add_argument("--estimado", type=float, required=True)
+    kr.add_argument("--real", type=float, required=True)
+    kr.add_argument("--invertido", type=float)
+    kr.add_argument("--archivos", type=int)
+    kr.add_argument("--lineas", type=int)
+    kr.add_argument("--interrupciones", action="store_true")
+    kr.add_argument("--notas", help="texto o @archivo.md")
     return p
 
 
@@ -556,6 +641,8 @@ def main():
         cmd_horas(args)
     elif args.grupo == "ticket":
         cmd_ticket(args)
+    elif args.grupo == "calibracion":
+        {"stats": cmd_cal_stats, "registrar": cmd_cal_registrar}[args.accion](args)
 
 
 if __name__ == "__main__":

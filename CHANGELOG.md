@@ -2,6 +2,23 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [0.5.0] — 2026-09-10
+
+### Añadido
+- **Fase 7 — Calibración** (G7 en verde, TDD estricto 100% local, sin Odoo).
+- `calibracion registrar`: crea cabecera, append de entrada con formato §4.4,
+  `--notas @archivo`, `--interrupciones`, campos opcionales `--invertido`,
+  `--archivos`, `--lineas`.
+- `calibracion stats`: `tareas`, `ratio_global`, `por_tipo` (ratio + conteo
+  para «≥3» de §6.4) y avisos («sin histórico» / «histórico corto <5»).
+- `PATRON_ENTRADA` (regex) y `archivo_calibracion(modelo)` (`Claude Sonnet 4.5!`
+  → `claude-sonnet-4.5.md`).
+- 16 tests N1 de calibración (TDD: rojos primero → verdes).
+
+### Corregido
+- Harness de tests `correr()` decodifica en UTF-8 (el script emite UTF-8 desde
+  0.4.0); antes los avisos acentuados salían mojibake.
+
 ## [0.4.0] — 2026-09-10
 
 ### Añadido

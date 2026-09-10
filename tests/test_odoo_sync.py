@@ -21,7 +21,7 @@ SCRIPT = AQUI.parent / "odoo_sync.py"
 
 def correr(args, cwd):
     return subprocess.run([sys.executable, str(SCRIPT), *args],
-                          capture_output=True, text=True, cwd=cwd)
+                          capture_output=True, text=True, encoding="utf-8", cwd=cwd)
 
 
 def correr_codigo(codigo, cwd):
@@ -29,7 +29,7 @@ def correr_codigo(codigo, cwd):
     snippet = (f"import sys, json; sys.path.insert(0, {str(SCRIPT.parent)!r}); "
                f"import odoo_sync; {codigo}")
     return subprocess.run([sys.executable, "-c", snippet],
-                          capture_output=True, text=True, cwd=cwd)
+                          capture_output=True, text=True, encoding="utf-8", cwd=cwd)
 
 
 def cargar_modulo():
@@ -435,6 +435,212 @@ class TestRegistrarActividad(unittest.TestCase):
             self.assertIn("#10 (25 caracteres)", lineas[1])
         finally:
             os.chdir(cwd)
+
+
+class TestArchivoCalibracion(unittest.TestCase):
+    """F7-T1: archivo_calibracion() sanea el modelo y crea la carpeta."""
+
+    def _error_capturado(self, mod):
+        capturado = {}
+        original = mod.error
+
+        def fake_error(mensaje, detalle=""):
+            capturado["mensaje"] = mensaje
+            raise SystemExit(1)
+        mod.error = fake_error
+        return capturado, original
+
+    def test_nombre_saneado_y_carpeta(self):
+        mod = cargar_modulo()
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        cwd = os.getcwd()
+        try:
+            os.chdir(repo)
+            ruta = mod.archivo_calibracion("Claude Sonnet 4.5!")
+            self.assertEqual(ruta.name, "claude-sonnet-4.5.md")
+            self.assertTrue(ruta.parent.is_dir())
+            self.assertTrue((repo / ".ia" / "calibracion").is_dir())
+        finally:
+            os.chdir(cwd)
+
+    def test_modelo_vacio_error(self):
+        mod = cargar_modulo()
+        capturado, original = self._error_capturado(mod)
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        cwd = os.getcwd()
+        try:
+            os.chdir(repo)
+            with self.assertRaises(SystemExit):
+                mod.archivo_calibracion("   ")
+        finally:
+            mod.error = original
+            os.chdir(cwd)
+        self.assertIn("modelo", capturado["mensaje"])
+
+
+class TestPatronEntrada(unittest.TestCase):
+    """F7-T2: robustez de PATRON_ENTRADA."""
+
+    def test_entrada_completa(self):
+        mod = cargar_modulo()
+        linea = ("## 2025-01-15T17:20 | FIX | T-123 | estimado_h:4.5 | real_h:5.2 "
+                 "| invertido_h:4.5 | archivos:4 | lineas:180 | interrupciones:si")
+        m = mod.PATRON_ENTRADA.match(linea)
+        self.assertIsNotNone(m)
+        self.assertEqual(m.group("tipo"), "FIX")
+        self.assertEqual(float(m.group("est")), 4.5)
+        self.assertEqual(float(m.group("inv")), 4.5)
+        self.assertEqual(int(m.group("arch")), 4)
+        self.assertEqual(m.group("int"), "si")
+
+    def test_entrada_minima(self):
+        mod = cargar_modulo()
+        linea = "## 2025-01-15T17:20 | FIX | T-123 | estimado_h:2 | real_h:3"
+        m = mod.PATRON_ENTRADA.match(linea)
+        self.assertIsNotNone(m)
+        self.assertEqual(float(m.group("real")), 3)
+        self.assertIsNone(m.group("inv"))
+
+    def test_no_parsea_separadores_mal(self):
+        mod = cargar_modulo()
+        self.assertIsNone(mod.PATRON_ENTRADA.match(
+            "## 2025-01-15 | FIX | T-1 estimado_h:2 | real_h:3"))
+
+    def test_no_parsea_sin_estimado(self):
+        mod = cargar_modulo()
+        self.assertIsNone(mod.PATRON_ENTRADA.match(
+            "## 2025-01-15 | FIX | T-1 | real_h:3"))
+
+    def test_no_parsea_prefijo_distinto(self):
+        mod = cargar_modulo()
+        self.assertIsNone(mod.PATRON_ENTRADA.match(
+            "#! 2025-01-15 | FIX | T-1 | estimado_h:2 | real_h:3"))
+
+
+class TestCalRegistrar(unittest.TestCase):
+    """F7-T3: calibracion registrar (test ANTES)."""
+
+    def test_crea_cabecera_y_append(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        r = correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                    "--tipo", "FIX", "--ref", "T-1",
+                    "--estimado", "2", "--real", "3"], repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                    "--tipo", "FIX", "--ref", "T-2",
+                    "--estimado", "1", "--real", "1"], repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ruta = repo / ".ia" / "calibracion" / "test-modelo.md"
+        self.assertTrue(ruta.exists())
+        lineas = ruta.read_text(encoding="utf-8").splitlines()
+        self.assertTrue(lineas[0].startswith("# "))   # cabecera
+        self.assertEqual(len([l for l in lineas if l.startswith("## ")]), 2)
+
+    def test_formato_exacto_y_interrupciones_default(self):
+        mod = cargar_modulo()
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                "--tipo", "FIX", "--ref", "T-1",
+                "--estimado", "2", "--real", "3"], repo)
+        ruta = repo / ".ia" / "calibracion" / "test-modelo.md"
+        linea = [l for l in ruta.read_text(encoding="utf-8").splitlines()
+                 if l.startswith("## ")][0]
+        m = mod.PATRON_ENTRADA.match(linea)
+        self.assertIsNotNone(m, linea)
+        self.assertEqual(m.group("tipo"), "FIX")
+        self.assertEqual(m.group("ref"), "T-1")
+        self.assertEqual(m.group("int"), "no")
+
+    def test_interrupciones_si_y_campos_opcionales(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                "--tipo", "FEAT", "--ref", "T-3", "--estimado", "4",
+                "--real", "5", "--invertido", "3.5", "--archivos", "3",
+                "--lineas", "150", "--interrupciones"], repo)
+        ruta = repo / ".ia" / "calibracion" / "test-modelo.md"
+        linea = [l for l in ruta.read_text(encoding="utf-8").splitlines()
+                 if l.startswith("## ")][0]
+        self.assertIn("invertido_h:3.5", linea)
+        self.assertIn("archivos:3", linea)
+        self.assertIn("lineas:150", linea)
+        self.assertIn("interrupciones:si", linea)
+
+    def test_notas_desde_archivo(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        notas = repo / "notas.md"
+        notas.write_text("Entrevista: hubo 2 interrupciones y retoma al siguiente día.",
+                         encoding="utf-8")
+        correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                "--tipo", "FIX", "--ref", "T-4", "--estimado", "2",
+                "--real", "4", "--notas", f"@{notas}"], repo)
+        ruta = repo / ".ia" / "calibracion" / "test-modelo.md"
+        contenido = ruta.read_text(encoding="utf-8")
+        self.assertIn("Entrevista: hubo 2 interrupciones", contenido)
+
+
+class TestCalStats(unittest.TestCase):
+    """F7-T4: calibracion stats (test ANTES, el más importante)."""
+
+    def test_sin_historico(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        r = correr(["calibracion", "stats", "--modelo", "test-modelo"], repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        data = json.loads(r.stdout)["data"]
+        self.assertEqual(data["tareas"], 0)
+        self.assertIsNone(data["ratio_global"])
+        self.assertIn("Sin histórico", data["aviso"])
+
+    def test_una_entrada_ratio_1_5(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                "--tipo", "FIX", "--ref", "T-1",
+                "--estimado", "2", "--real", "3"], repo)
+        r = correr(["calibracion", "stats", "--modelo", "test-modelo"], repo)
+        data = json.loads(r.stdout)["data"]
+        self.assertEqual(data["tareas"], 1)
+        self.assertEqual(data["ratio_global"], 1.5)   # 3/2
+
+    def test_invertido_tiene_prioridad(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                "--tipo", "FIX", "--ref", "T-1", "--estimado", "2",
+                "--real", "10", "--invertido", "3"], repo)
+        r = correr(["calibracion", "stats", "--modelo", "test-modelo"], repo)
+        data = json.loads(r.stdout)["data"]
+        self.assertEqual(data["ratio_global"], 1.5)   # 3/2, no 10/2
+
+    def test_por_tipo_con_dos_tipos(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        for tipo, est, real in (("FIX", 2, 3), ("FEAT", 4, 8)):
+            correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                    "--tipo", tipo, "--ref", "T-x",
+                    "--estimado", str(est), "--real", str(real)], repo)
+        r = correr(["calibracion", "stats", "--modelo", "test-modelo"], repo)
+        data = json.loads(r.stdout)["data"]
+        self.assertEqual(data["por_tipo"]["FIX"]["ratio"], 1.5)
+        self.assertEqual(data["por_tipo"]["FEAT"]["ratio"], 2.0)
+        self.assertEqual(data["por_tipo"]["FEAT"]["tareas"], 1)  # para ">=3" (§6.4)
+        self.assertEqual(data["ratio_global"], 1.75)   # (1.5+2.0)/2
+
+    def test_aviso_historico_corto(self):
+        tmp, repo = repo_temporal()
+        self.addCleanup(tmp.cleanup)
+        correr(["calibracion", "registrar", "--modelo", "test-modelo",
+                "--tipo", "TST", "--ref", "T-1",
+                "--estimado", "1", "--real", "1"], repo)
+        r = correr(["calibracion", "stats", "--modelo", "test-modelo"], repo)
+        data = json.loads(r.stdout)["data"]
+        self.assertIn("Histórico corto", data["aviso"])
 
 
 if __name__ == "__main__":

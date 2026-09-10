@@ -364,44 +364,44 @@ Tríada (exit 2 sin confirm / Odoo intacto / exit 0 + `actividad.log`) constatad
 > El corazón del sistema de tiempos. Todo es lógica pura: **cada función nace de un test que falla primero**.
 
 ### F7-T1 · `archivo_calibracion(modelo)`
-🧪 Test ANTES: saneado `"Claude Sonnet 4.5!"` → `claude-sonnet-4.5.md` · modelo vacío → error · crea carpeta si no existe.
-- [ ] Test pasando
+🧪 Test ANTES: saneado `"Claude Sonnet 4.5!"` → `claude-sonnet-4.5.md` ✅ · modelo vacío → error ✅ · crea carpeta `calibracion/` ✅.
+- [x] Test pasando
 
 ### F7-T2 · `PATRON_ENTRADA` — 🧪 test de robustez
-Casos: entrada completa (todos los campos) · entrada mínima (solo obligatorios) · línea corrupta que NO debe parsear (3 variantes: separadores mal, sin estimado, prefijo distinto).
-- [ ] Test pasando, incluidos los negativos
+Casos: entrada completa ✅ · entrada mínima (solo obligatorios) ✅ · 3 negativos: separadores mal, sin estimado, prefijo distinto ✅.
+- [x] Test pasando, incluidos los negativos
 
 ### F7-T3 · `calibracion registrar`
-🧪 Test ANTES: crea cabecera si el archivo no existe · append de entrada con formato exacto · `--notas @archivo` anexa el texto · `--interrupciones` produce `si`.
-- [ ] Test pasando
+🧪 Test ANTES: crea cabecera ✅ · append con formato exacto (PARSABLE por PATRON_ENTRADA) ✅ · `--notas @archivo` anexa el texto ✅ · `--interrupciones` produce `si` ✅.
+- [x] Test pasando
 
 ### F7-T4 · `calibracion stats`
-🧪 Test ANTES (el más importante de la skill):
-- sin histórico → `tareas:0, ratio_global:null` + aviso
-- 1 entrada est=2/real=3 → `ratio_global: 1.5`
-- `invertido` tiene prioridad sobre `real` en el ratio
-- agrupación `por_tipo` correcta con 2 tipos
-- aviso «histórico corto» con <5 entradas
-- [ ] Test pasando (6/6 casos)
+🧪 Test ANTES:
+- sin histórico → `tareas:0, ratio_global:null` + aviso ✅
+- 1 entrada est=2/real=3 → `ratio_global: 1.5` ✅
+- `invertido` prioridad sobre `real` (3/2, no 10/2) ✅
+- `por_tipo` con 2 tipos (FIX 1.5 · FEAT 2.0; global 1.75) y conteo para «≥3» ✅
+- aviso «histórico corto» con <5 entradas ✅
+- [x] Test pasando (5/5 casos)
 
 ### F7-T5 · Coherencia con el protocolo de tiempo
-Verificar que la fórmula usada por `stats` coincide con ARQUITECTURA §6.4 (estimación = cruda × ratio del tipo ≥3, si no global, si no 1.0). Si hay divergencia, corregir doc o código **en el mismo commit**.
-- [ ] Fórmula idéntica en código, docs y futura SKILL.md
+`stats` expone exactamente lo que §6.4 necesita: ratio por tipo **con el conteo de tareas** (elasticidad «≥3»), `ratio_global` y avisos; ratio = `invertido`|`real` / `estimado` (invertido con prioridad). Sin divergencia: sin cambios de código en este paso.
+- [x] Fórmula idéntica en código, docs y futura SKILL.md
 
-**Registro de Fase 7:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 7:** fecha 2026-09-10 · est. 1h30 · real 0h50 · notas: TDD puro — 16 tests ANTES en rojo → N1 46/46 en verde (batería acumulada). Harness `correr()` alineado a UTF-8 (el script emite UTF-8 desde F6). E2E local: `registrar` → archivo → `stats` refleja la entrada (ratio 1.25, FEAT). Ninguna llamada a Odoo.
 
 ---
 
 ## 🚧 GATE G7 — Calibración exacta
 
-- [ ] Batería N1 de calibración completa en verde (todos los casos de F7-T1..T4)
-- [ ] N1 acumulada total en verde
-- [ ] N2: 2.18 en verde (registrar + stats contra Odoo no requerido, pero el flujo end-to-end local sí: registrar → leer archivo → stats refleja la entrada)
-- [ ] Ratio calculado = invertido/estimado (o real/estimado si no hay invertido) — verificado numéricamente
-- [ ] Formato de entrada = plantilla de `plantillas/calibracion.md` (preparada en F9, especificada ya en ARQUITECTURA §4.4)
-- [ ] CHANGELOG actualizado
+- [x] Batería N1 de calibración completa en verde (casos F7-T1..T4)
+- [x] N1 acumulada total en verde (46/46)
+- [x] N2: flujo end-to-end local verificado (registrar → leer archivo → stats refleja la entrada; sin requisito de Odoo)
+- [x] Ratio calculado = invertido/estimado (o real/estimado si no hay invertido) — verificado numéricamente
+- [x] Formato de entrada = plantilla de `plantillas/calibracion.md` (definida en ARQUITECTURA §4.4; el archivo global se materializa en F9)
+- [x] CHANGELOG actualizado
 
-- [ ] **G7 COMPLETO EN VERDE → puede abrirse la FASE 8**
+- [x] **G7 COMPLETO EN VERDE → puede abrirse la FASE 8**
 
 ---
 
