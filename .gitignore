@@ -1,0 +1,16 @@
+# --- odoo-gestor (local, no versionar) ---
+**/.ia/.env
+**/.ia/FOCO.md
+**/.ia/actividad.log
+**/.ia/calibracion/
+**/.ia/tmp/
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
