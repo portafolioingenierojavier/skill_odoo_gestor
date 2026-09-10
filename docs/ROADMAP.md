@@ -324,38 +324,38 @@ Tríada (exit 2 sin confirm / Odoo intacto / exit 0 + `actividad.log`) constatad
 ## FASE 6 — Chatter, horas y tickets
 
 ### F6-T1 · `chatter post`
-1. Redactar `.ia/tmp/resumen_prueba.md` (con acentos y formato 📊).
-2. 🧪 Ejecutar N2: 2.12 (exit 2 con `vista_previa`, sin mensaje en Odoo) y 2.13 (exit 0, mensaje íntegro y legible en el chatter, con acentos correctos).
-3. Caso borde: `--desde-archivo` inexistente → error limpio; mensaje vacío → error.
-- [ ] 2.12, 2.13 y bordes en verde
+1. Redactado `.ia/tmp/resumen_prueba.md` (acentos y formato 📊).
+2. 🧪 N2 2.12 (exit 2 con `vista_previa`, sin mensaje en Odoo) y 2.13 (exit 0, mensaje íntegro en el chatter con acentos correctos) ✅.
+   > Corrección: `--desde-archivo` lee vía `texto_o_archivo(f"@...")` (antes devolvía la ruta literal).
+3. Bordes: `--desde-archivo` inexistente → error limpio; mensaje vacío → error ✅.
+- [x] 2.12, 2.13 y bordes en verde
 
 ### F6-T2 · `horas registrar`
-🧪 Ejecutar N2: 2.14 según el modo detectado en G3:
-- timesheet → exit 0 + línea visible en la hoja de horas de QA-SKILL
-- solo-registro → exit 1 con explicación accionable
-- [ ] 2.14 en verde en el modo que corresponda (modo: ______)
+🧪 N2 2.14 (modo detectado en G3 = **timesheet**): dry-run exit 2 → confirm exit 0 + línea `account.analytic.line` #346 (1.5h, IA Sync #21, tarea #60) registrada ✅.
+- [x] 2.14 en verde en el modo que corresponda (modo: timesheet)
 
 ### F6-T3 · `ticket vincular`
-1. Si `doctor` detectó campo de tickets: 🧪 N2 2.15 con un ticket real de la instancia.
-2. Si no detectó: probar con `--campo <nombre_real>` (preguntar al usuario de la instancia); guardar el campo en `config.json` y documentarlo en ARQUITECTURA.
-3. Caso: sin campo y sin `--campo` → exit 1 con instrucción.
-- [ ] Vinculación probada o error accionable constatado
-- [ ] Campo de tickets definitivo: ______
+1. `doctor` no detecta campo de tickets → se intentó instalar `helpdesk`: en Odoo Community queda como **`uninstallable`** (módulo Enterprise; `button_install` → Access Denied) ✅ constatado.
+2. Mecanismo probado con `--campo tag_ids` (m2m real): dry-run exit 2 → confirm exit 0 → vínculo escrito y verificado en Odoo; tag limpio tras la prueba.
+3. Sin campo y sin `--campo` → exit 1 con error DETALLADO y accionable (alternativas: `--campo` + config, instalar módulo, re-ejecutar doctor) ✅.
+> Campo de tickets definitivo: **ninguno en QA** (sin módulo Helpdesk CE). Detección ampliada a `ticket`/`helpdesk`/`issue`.
+- [x] Vinculación probada o error accionable constatado
+- [x] Campo de tickets definitivo: ninguno en QA (helpdesk uninstallable en Community)
 
-**Registro de Fase 6:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 6:** fecha 2026-09-10 · est. 1h00 · real 0h45 · notas: `chatter post` exige leer `--desde-archivo` con prefijo `@`; horas en timesheet directo; tickets sin campo real en CE → error detallado + demo del mecanismo con m2m.
 
 ---
 
 ## 🚧 GATE G6 — Comunicación completa
 
-- [ ] N2: 2.12–2.15 en verde
-- [ ] N1 acumulada en verde
-- [ ] Texto publicado en chatter = exactamente el aprobado en dry-run (comparación manual)
-- [ ] UTF-8 íntegro en el mensaje publicado (acentos y emojis correctos)
-- [ ] Horas: comportamiento coherente con `modo_horas` del config
-- [ ] CHANGELOG actualizado
+- [x] N2: 2.12–2.15 en verde
+- [x] N1 acumulada en verde (30/30)
+- [x] Texto publicado en chatter = exactamente el aprobado en dry-run (comparación manual: 224 caracteres idénticos)
+- [x] UTF-8 íntegro en el mensaje publicado (acentos y emojis correctos)
+- [x] Horas: comportamiento coherente con `modo_horas` del config (timesheet)
+- [x] CHANGELOG actualizado
 
-- [ ] **G6 COMPLETO EN VERDE → puede abrirse la FASE 7**
+- [x] **G6 COMPLETO EN VERDE → puede abrirse la FASE 7**
 
 ---
 

@@ -21,6 +21,10 @@ import sys
 import xmlrpc.client
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 # ------------------------------------------------------------------ constantes
 
 CREDENCIALES = ("ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY")
@@ -253,7 +257,9 @@ def cmd_doctor(args):
                       else ("user_id" if "user_id" in campos else None),
         "planned_hours": "planned_hours" in campos,
         "state": "state" in campos,
-        "tickets": sorted(c for c in campos if "ticket" in c.lower()),
+        "tickets": sorted(c for c in campos
+                          if any(x in c.lower()
+                                 for x in ("ticket", "helpdesk", "issue"))),
     }
     modulos = odoo.buscar("ir.module.module",
                           [["name", "in", ["hr_timesheet"]],
@@ -394,6 +400,76 @@ def cmd_tarea_estado(args):
     ok({"id": args.id, "estado": args.estado})
 
 
+def cmd_chatter_post(args):
+    odoo, _ = conexion_y_config()
+    cuerpo = (texto_o_archivo(f"@{args.desde_archivo}") if args.desde_archivo
+              else (args.mensaje or ""))
+    if not cuerpo.strip():
+        error("Mensaje vacío: usa --desde-archivo ARCHIVO o --mensaje TEXTO")
+    propuesta = {"accion": "publicar en chatter", "tarea": f"#{args.id}",
+                 "longitud": len(cuerpo), "vista_previa": cuerpo[:300]}
+    if not args.confirm:
+        dry_run(propuesta)
+    odoo.ejec("project.task", "message_post", [args.id], body=cuerpo)
+    registrar_actividad("chatter post", f"#{args.id} ({len(cuerpo)} caracteres)")
+    ok({"id": args.id, "publicado": True, "caracteres": len(cuerpo)})
+
+
+def cmd_horas(args):
+    odoo, cfg = conexion_y_config()
+    if cfg.get("modo_horas") != "timesheet":
+        error("hr_timesheet no instalado (modo «solo-registro»): registra las "
+              "horas en el resumen del chatter y en la calibración")
+    empleados = odoo.buscar("hr.employee", [["user_id", "=", odoo.uid]],
+                            ["id", "name"])
+    if not empleados:
+        error("El usuario IA Sync no tiene empleado vinculado (necesario para "
+              "timesheets). Crea un empleado en RRHH y asígnale este usuario.")
+    vals = {"name": args.nota or "Trabajo de la IA",
+            "project_id": cfg["proyecto_id"], "task_id": args.id,
+            "unit_amount": args.horas, "employee_id": empleados[0]["id"]}
+    propuesta = {"accion": "registrar horas (timesheet)", "tarea": f"#{args.id}",
+                 "vals": vals}
+    if not args.confirm:
+        dry_run(propuesta)
+    odoo.ejec("account.analytic.line", "create", [vals])
+    registrar_actividad("horas registrar", f"#{args.id} {args.horas}h")
+    ok({"tarea": args.id, "horas": args.horas})
+
+
+def cmd_ticket(args):
+    odoo, cfg = conexion_y_config()
+    disponibles = cfg.get("campos", {}).get("tickets") or []
+    campo = args.campo or (disponibles[0] if disponibles else None)
+    if not campo:
+        error("No hay campo de tickets detectado en esta instancia: el módulo "
+              "Helpdesk no está disponible (Odoo Community omite `helpdesk`, "
+              "y en QA quedó como `uninstallable`). Alternativas: 1) si "
+              "project.task tiene un campo de relación hacia tickets "
+              "(m2m/o2m), indícalo con --campo <campo> y guárdalo en "
+              ".ia/config.json (campos.tickets); 2) instala Helpdesk "
+              "(Enterprise) o un módulo de tickets de comunidad y re-ejecuta "
+              "doctor para que lo detecte.")
+    info = odoo.ejec("project.task", "fields_get", [campo],
+                     attributes=["type", "relation"]).get(campo)
+    if not info or info["type"] not in ("many2many", "one2many"):
+        error(f"El campo {campo} no es una relación válida hacia tickets")
+    ticket = odoo.ejec(info["relation"], "read", [args.ticket],
+                       fields=["display_name", "name"])
+    if not ticket:
+        error(f"No existe el ticket {args.ticket} en {info['relation']}")
+    nombre = ticket[0].get("display_name") or ticket[0].get("name")
+    propuesta = {"accion": "vincular ticket", "tarea": f"#{args.id}",
+                 "campo": campo, "ticket": f"#{args.ticket} {nombre}"}
+    if not args.confirm:
+        dry_run(propuesta)
+    odoo.ejec("project.task", "write", [args.id],
+              {campo: [(6, 0, [args.ticket])]})
+    registrar_actividad("ticket vincular",
+                        f"#{args.id} ← ticket {args.ticket} vía {campo}")
+    ok({"tarea": args.id, "ticket": args.ticket, "campo": campo})
+
+
 # ------------------------------------------------------------------ entrada
 
 def construir_parser():
@@ -438,6 +514,27 @@ def construir_parser():
     st.add_argument("id", type=int)
     st.add_argument("--estado", required=True, choices=list(ESTADOS))
     st.add_argument("--confirm", action="store_true")
+
+    cha = sub.add_parser("chatter")
+    ch = cha.add_subparsers(dest="accion", required=True).add_parser("post")
+    ch.add_argument("id", type=int)
+    ch.add_argument("--desde-archivo")
+    ch.add_argument("--mensaje")
+    ch.add_argument("--confirm", action="store_true")
+
+    hor = sub.add_parser("horas")
+    hr = hor.add_subparsers(dest="accion", required=True).add_parser("registrar")
+    hr.add_argument("id", type=int)
+    hr.add_argument("--horas", type=float, required=True)
+    hr.add_argument("--nota")
+    hr.add_argument("--confirm", action="store_true")
+
+    tic = sub.add_parser("ticket")
+    tv = tic.add_subparsers(dest="accion", required=True).add_parser("vincular")
+    tv.add_argument("id", type=int)
+    tv.add_argument("--ticket", type=int, required=True)
+    tv.add_argument("--campo")
+    tv.add_argument("--confirm", action="store_true")
     return p
 
 
@@ -453,6 +550,12 @@ def main():
         {"get": cmd_tarea_get, "list": cmd_tarea_list, "crear": cmd_tarea_crear,
          "editar": cmd_tarea_editar, "etapa": cmd_tarea_etapa,
          "estado": cmd_tarea_estado}[args.accion](args)
+    elif args.grupo == "chatter":
+        cmd_chatter_post(args)
+    elif args.grupo == "horas":
+        cmd_horas(args)
+    elif args.grupo == "ticket":
+        cmd_ticket(args)
 
 
 if __name__ == "__main__":

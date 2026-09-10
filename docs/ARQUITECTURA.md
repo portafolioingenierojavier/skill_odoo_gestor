@@ -391,7 +391,9 @@ def cmd_doctor(args):
                       else ("user_id" if "user_id" in campos else None),
         "planned_hours": "planned_hours" in campos,
         "state": "state" in campos,
-        "tickets": sorted(c for c in campos if "ticket" in c.lower()),
+        "tickets": sorted(c for c in campos
+                          if any(x in c.lower()
+                                 for x in ("ticket", "helpdesk", "issue"))),
     }
     modulos = odoo.buscar("ir.module.module",
                           [["name", "in", ["hr_timesheet"]],
@@ -547,7 +549,8 @@ def cmd_tarea_estado(args):
 
 def cmd_chatter_post(args):
     odoo, _ = conexion_y_config()
-    cuerpo = texto_o_archivo(args.desde_archivo) if args.desde_archivo else (args.mensaje or "")
+    cuerpo = (texto_o_archivo(f"@{args.desde_archivo}") if args.desde_archivo
+              else (args.mensaje or ""))
     if not cuerpo.strip():
         error("Mensaje vacío: usa --desde-archivo ARCHIVO o --mensaje TEXTO")
     propuesta = {"accion": "publicar en chatter", "tarea": f"#{args.id}",
@@ -583,8 +586,14 @@ def cmd_ticket(args):
     disponibles = cfg.get("campos", {}).get("tickets") or []
     campo = args.campo or (disponibles[0] if disponibles else None)
     if not campo:
-        error("No se detectó campo de tickets. Indica el campo exacto con "
-              "--campo y guárdalo en .ia/config.json (campos.tickets)")
+        error("No hay campo de tickets detectado en esta instancia: el módulo "
+              "Helpdesk no está disponible (Odoo Community omite `helpdesk`, "
+              "y en QA quedó como `uninstallable`). Alternativas: 1) si "
+              "project.task tiene un campo de relación hacia tickets "
+              "(m2m/o2m), indícalo con --campo <campo> y guárdalo en "
+              ".ia/config.json (campos.tickets); 2) instala Helpdesk "
+              "(Enterprise) o un módulo de tickets de comunidad y re-ejecuta "
+              "doctor para que lo detecte.")
     info = odoo.ejec("project.task", "fields_get", [campo],
                      {"attributes": ["type", "relation"]}).get(campo)
     if not info or info["type"] not in ("many2many", "one2many"):

@@ -2,6 +2,25 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [0.4.0] — 2026-09-10
+
+### Añadido
+- **Fase 6 — Chatter, horas y tickets** (G6 en verde).
+- `chatter post ID --desde-archivo F.md | --mensaje TEXTO`: dry-run muestra
+  `vista_previa`; confirm publica en el chatter y loguea (N2 2.12/2.13 ✅).
+- `horas registrar ID --horas X --nota`: crea línea de timesheet
+  (`account.analytic.line`) con validación de empleado y modo; modulo
+  `hr_timesheet` detectado en G3 ✅ (N2 2.14).
+- `ticket vincular ID --ticket N [--campo]`: dry-run/confirm; error detallado
+  y accionable si no hay campo (N2 2.15). Detección de `doctor` ampliada a
+  `ticket`/`helpdesk`/`issue`.
+
+### Corregido
+- `chatter post --desde-archivo` lee el archivo vía `texto_o_archivo("@"+ruta)`;
+  antes publicaba la ruta literal.
+- `-h`/ayuda de argparse: crasheaba con `UnicodeEncodeError` en consolas cp1252;
+  ahora stdout/stderr se reconfiguran a UTF-8 al arrancar.
+
 ## [0.3.0] — 2026-09-10
 
 ### Añadido
