@@ -55,15 +55,6 @@ PATRON_ENTRADA = re.compile(
     r"(?:\s*\|\s*interrupciones:(?P<int>\w+))?\s*$"
 )
 
-PATRON_ENTRADA = re.compile(
-    r"^##\s*(?P<fecha>\S+)\s*\|\s*(?P<tipo>[A-Za-z]+)\s*\|\s*(?P<ref>.*?)\s*\|\s*"
-    r"estimado_h:(?P<est>[\d.]+)\s*\|\s*real_h:(?P<real>[\d.]+)"
-    r"(?:\s*\|\s*invertido_h:(?P<inv>[\d.]+))?"
-    r"(?:\s*\|\s*archivos:(?P<arch>\d+))?"
-    r"(?:\s*\|\s*lineas:(?P<lin>\d+))?"
-    r"(?:\s*\|\s*interrupciones:(?P<int>\w+))?\s*$"
-)
-
 # ------------------------------------------------------------------ utilidades
 
 def ok(data, codigo=0):

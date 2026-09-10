@@ -177,6 +177,36 @@ Redactar en `.ia/tmp/resumen.md` y publicar con `chatter post --desde-archivo`.
 ## Nombres
 Formato `[TIPO] título ejecutivo` · TIPOS: FEAT FIX REF DOC OPS SEC TST CHK
 · ≤ 70 caracteres · resultado observable, no técnica interna · rama: TIPO-<id>.
+
+## Identificación de modelo
+El modelo de IA de la sesión se anota en FOCO (sección «Modelo de IA»). La
+calibración se registra por modelo (`calibracion stats --modelo <tu modelo>`),
+porque el ratio de desviación depende de quién estima.
+
+## Manejo de fallos
+- Reporta el error tal cual lo devuelve el script (regla dura 6).
+- Exit codes: 0 = OK · 1 = error · 2 = dry-run correcto (falta --confirm).
+- Si el script no cubre una necesidad: proponer ampliarlo en este repo (TDD),
+  nunca improvisar XML-RPC ni editar `.env`.
+
+## Comandos (índice — 15/15)
+| Comando | Tipo | Notas |
+|---|---|---|
+| `now` | local | reloj exacto |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas; escribe config |
+| `proyecto info` | lectura | datos y etapas del proyecto |
+| `tarea get ID` | lectura | campos según config + chatter |
+| `tarea list` | lectura | filtros `--etapa --estado --limite` |
+| `tarea crear --nombre ...` | escritura | dry-run → `--confirm` |
+| `tarea editar ID --set CAMPO=VALOR` | escritura | dry-run → `--confirm` |
+| `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
+| `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
+| `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
+| `horas registrar ID --horas X` | escritura | dry-run → `--confirm` |
+| `ticket vincular ID --ticket N` | escritura | dry-run → `--confirm` |
+| `calibracion registrar --modelo M ...` | local | entrada de tiempo por tarea |
+| `calibracion stats --modelo M` | local | ratios global y por tipo |
+| `raw --modelo M --domain JSON` | **solo lectura** | método prohibido → exit 1 |
 ```
 
 ### 4.2 `odoo_sync.py` (global)

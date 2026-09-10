@@ -440,31 +440,31 @@ Casos: entrada completa ✅ · entrada mínima (solo obligatorios) ✅ · 3 nega
 
 ### F9-T1 · Redactar `SKILL.md` completo
 Contenido íntegro según ARQUITECTURA §4.1: frontmatter, identidad/alcance (guard anti-mezcla), reglas duras 1–7, arranque de sesión (checklist 1–5), ciclo de tarea con criterios de transición, protocolo de tiempo (6 pasos, umbral 25%, entrevista de desviación), política de escrituras, formato de resumen de chatter, convención de nombres, manejo de fallos, identificación de modelo.
-- [ ] SKILL.md redactado en español, completo, sin contradicciones con PAUTAS/ARQUITECTURA
+- [x] SKILL.md redactado en español, completo, sin contradicciones con PAUTAS/ARQUITECTURA
 
 ### F9-T2 · Plantillas
 1. `plantillas/FOCO.md` y `plantillas/calibracion.md` según ARQUITECTURA §4.3–§4.4.
 2. 🧪 Test N1 de coherencia: el ejemplo de entrada de `plantillas/calibracion.md` **parsea** con `PATRON_ENTRADA`; los campos que SKILL.md pide anotar en FOCO tienen hueco en la plantilla (tarea activa, inicio reloj, estimado, hitos, pendiente de sincronizar, modelo, notas).
-- [ ] Test de coherencia pasando
+- [x] Test de coherencia pasando
 
 ### F9-T3 · Cobertura de comandos en la documentación
 Tabla de verificación: cada uno de los 15 comandos del CLI aparece en el índice de SKILL.md y en la referencia de ARQUITECTURA §5. Comando a comando:
-- [ ] now · doctor · proyecto info · tarea get · tarea list · tarea crear · tarea editar · tarea etapa · tarea estado · chatter post · horas registrar · ticket vincular · calibracion stats · calibracion registrar · raw — **15/15 documentados**
+- [x] now · doctor · proyecto info · tarea get · tarea list · tarea crear · tarea editar · tarea etapa · tarea estado · chatter post · horas registrar · ticket vincular · calibracion stats · calibracion registrar · raw — **15/15 documentados**
 
-**Registro de Fase 9:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 9:** fecha 2026-09-10 · est. 1h00 · real 0h50 · notas: `SKILL.md` = §4.1 literal + «Identificación de modelo», «Manejo de fallos» e índice de comandos (synced de vuelta a §4.1 para cero contradicción); plantilla de calibración con ejemplo que parsea con `PATRON_ENTRADA`; 4 tests nuevos (N1 50/50); limpio duplicado de `PATRON_ENTRADA` en el script.
 
 ---
 
 ## 🚧 GATE G9 — Coherencia triple (código–plantilla–doc)
 
-- [ ] SKILL.md completo y en español
-- [ ] Test de coherencia plantilla↔parser en verde
-- [ ] 15/15 comandos documentados en SKILL.md y ARQUITECTURA §5
-- [ ] **Cero contradicción** entre SKILL.md, ARQUITECTURA.md y PAUTAS.md (lectura cruzada completa: reglas duras, protocolos, formatos, umbrales)
-- [ ] El formato de FOCO en la plantilla cubre todos los datos que el protocolo de tiempo exige registrar
-- [ ] CHANGELOG actualizado
+- [x] SKILL.md completo y en español
+- [x] Test de coherencia plantilla↔parser en verde
+- [x] 15/15 comandos documentados en SKILL.md y ARQUITECTURA §5
+- [x] **Cero contradicción** entre SKILL.md, ARQUITECTURA.md y PAUTAS.md (lectura cruzada completa: reglas duras, protocolos, formatos, umbrales) — §4.1 sincronizado con el archivo real
+- [x] El formato de FOCO en la plantilla cubre todos los datos que el protocolo de tiempo exige registrar
+- [x] CHANGELOG actualizado
 
-- [ ] **G9 COMPLETO EN VERDE → puede abrirse la FASE 10**
+- [x] **G9 COMPLETO EN VERDE → puede abrirse la FASE 10**
 
 ---
 

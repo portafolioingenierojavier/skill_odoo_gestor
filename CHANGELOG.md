@@ -2,6 +2,22 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [0.7.0] — 2026-09-10
+
+### Añadido
+- **Fase 9 — `SKILL.md` y plantillas** (G9 en verde).
+- `SKILL.md` completo (reglas duras 1–7, arranque 1–5, ciclo de tarea,
+  protocolo de tiempo, escrituras, chatter, nombres, fallos, modelo) con
+  índice de los 15 comandos.
+- `plantillas/FOCO.md` y `plantillas/calibracion.md` per ARQUITECTURA
+  §4.3–§4.4; la plantilla de calibración ahora incluye un ejemplo real que
+  parsea con `PATRON_ENTRADA`.
+- 4 tests nuevos de coherencia plantilla↔SKILL.md (N1: 50/50).
+
+### Corregido
+- Duplicado de `PATRON_ENTRADA` en `odoo_sync.py` (el segundo sombreaba al
+  primero; sin cambio de comportamiento).
+
 ## [0.6.0] — 2026-09-10
 
 ### Añadido

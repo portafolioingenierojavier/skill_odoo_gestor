@@ -643,5 +643,46 @@ class TestCalStats(unittest.TestCase):
         self.assertIn("Histórico corto", data["aviso"])
 
 
+class TestPlantillasCoherencia(unittest.TestCase):
+    """F9-T2: coherencia plantillas ↔ parser ↔ SKILL.md."""
+
+    RAIZ = AQUI.parent
+
+    def test_ejemplo_de_calibracion_parsea(self):
+        mod = cargar_modulo()
+        plantilla = (self.RAIZ / "plantillas" / "calibracion.md").read_text(
+            encoding="utf-8")
+        candidatos = [l[2:] for l in plantilla.splitlines()
+                      if l.startswith("# ## ")]
+        matches = [mod.PATRON_ENTRADA.match(c) for c in candidatos]
+        m = next((x for x in matches if x), None)
+        self.assertIsNotNone(m,
+                             "ninguna línea de ejemplo parsea con PATRON_ENTRADA")
+        self.assertEqual(m.group("tipo"), "FEAT")
+        self.assertEqual(m.group("est"), "2")
+
+    def test_foco_cubre_campos_del_protocolo_de_tiempo(self):
+        foco = (self.RAIZ / "plantillas" / "FOCO.md").read_text(encoding="utf-8")
+        for hueco in ("Tarea activa", "Inicio (reloj)", "Estimado", "Hitos",
+                      "Pendiente de sincronizar", "Modelo de IA",
+                      "Notas de sesión anterior"):
+            self.assertIn(hueco, foco)
+
+    def test_calibracion_plantea_formato_del_registrador(self):
+        plantilla = (self.RAIZ / "plantillas" / "calibracion.md").read_text(
+            encoding="utf-8")
+        self.assertIn("estimado_h:", plantilla)
+        self.assertIn("interrupciones:si|no", plantilla)
+
+    def test_skilled_indice_cubre_los_15_comandos(self):
+        skill = (self.RAIZ / "SKILL.md").read_text(encoding="utf-8")
+        for comando in ("now", "doctor", "proyecto info", "tarea get",
+                        "tarea list", "tarea crear", "tarea editar",
+                        "tarea etapa", "tarea estado", "chatter post",
+                        "horas registrar", "ticket vincular",
+                        "calibracion registrar", "calibracion stats", "raw"):
+            self.assertIn(f"`{comando}", skill)
+
+
 if __name__ == "__main__":
     unittest.main()
