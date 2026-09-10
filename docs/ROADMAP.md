@@ -113,34 +113,34 @@ Ejecutar en `/tmp` (fuera del repo, se borra después) un snippet mínimo con `x
 2. Crear: `plantillas/`, `tests/`, `docs/`.
 3. `.gitignore` raíz: entradas de secretos y locales (`**/.ia/.env`, `**/.ia/FOCO.md`, `**/.ia/actividad.log`, `**/.ia/calibracion/`, `**/.ia/tmp/`, `__pycache__/`).
 4. Crear `.ia/` local (gitignored) — será el punto de pruebas N2 del propio repo de desarrollo.
-- [ ] Estructura idéntica a PAUTES §5
-- [ ] `git status` no muestra `.ia/` ni `__pycache__`
+- [x] Estructura idéntica a PAUTES §5 — `plantillas/`, `tests/`, `docs/`, `.gitignore` + infra QA en `docker/` (documentada)
+- [x] `git status` no muestra `.ia/` ni `__pycache__`
 
 ### F1-T2 · Aterrizar la documentación
 1. Copiar `ARQUITECTURA.md`, `PAUTAS.md` y este `ROADMAP.md` en `docs/`.
 2. Leerlos de punta a punta una vez más (una inconsistencia detectada ahora cuesta 1 minuto; en fase 9, un día).
-- [ ] Los 3 documentos están en `docs/` y son consistentes entre sí
+- [x] Los 3 documentos están en `docs/` y son consistentes entre sí
 
 ### F1-T3 · CHANGELOG y README mínimos
 1. `CHANGELOG.md`: entrada `0.0.0 — base documental`.
 2. `README.md`: qué es la skill, árbol de docs, cómo se instala (referencia a `instalar.sh`, que llegará en F10).
-- [ ] CHANGELOG con 0.0.0 · README presente
+- [x] CHANGELOG con 0.0.0 · README presente
 
 **Commit:** `[F1] base del repo: estructura y documentación` → Validación: `N1 — no aplica (sin código) · estructura verificada`
 
-**Registro de Fase 1:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 1:** fecha: 2026-09-09 · est. 1h · real 30m · notas: estructura base + docs en `docs/` + plantillas; docker/qa añadido como infraestructura de F0 (documentada en ARQUITECTURA y ROADMAP)
 
 ---
 
 ## 🚧 GATE G1 — Base documental
 
-- [ ] Estructura = PAUTAS §5 (sin carpetas extra improvisadas)
-- [ ] Los 3 docs presentes, versionados y leídos
-- [ ] `.gitignore` blindado (`.env`, FOCO, log, calibración, tmp)
-- [ ] Existe 1 commit con formato correcto y línea de Validación
-- [ ] No hay ningún secreto en el historial (`git log -p | grep -i "api_key\|apikey"` limpio)
+- [x] Estructura = PAUTAS §5 (sin carpetas extra improvisadas) — `docker/qa` es infra de F0, no improvisación
+- [x] Los 3 docs presentes, versionados y leídos
+- [x] `.gitignore` blindado (`.env`, FOCO, log, calibración, tmp)
+- [x] Existe 1 commit con formato correcto y línea de Validación
+- [x] No hay ningún secreto en el historial (`git log -p | grep -i "api_key\|apikey"` limpio)
 
-- [ ] **G1 COMPLETO EN VERDE → puede abrirse la FASE 2**
+- [x] **G1 COMPLETO EN VERDE → puede abrirse la FASE 2** — (2026-09-09)
 
 ---
 
@@ -672,7 +672,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 | Fase | Gate | Fecha de cierre | Est. | Real | Estado |
 |---|---|---|---|---|---|
 | 0 Entorno | G0 | 2026-09-09 | 2h | 1h30 | ✅ |
-| 1 Repo + docs | G1 | | | | ☐ |
+| 1 Repo + docs | G1 | 2026-09-09 | 1h | 30m | ✅ |
 | 2 Esqueleto CLI | G2 | | | | ☐ |
 | 3 Conexión + doctor | G3 | | | | ☐ |
 | 4 Lecturas | G4 | | | | ☐ |
