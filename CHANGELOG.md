@@ -19,6 +19,9 @@ Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 - El ensayo generó además 6 tareas Odoo reales en QA (62–67, de vuelta a
   Revisión) y un mini-módulo `hr_custom` (~580 líneas) fuera del repo de
   desarrollo.
+- Convención: la `--nota` de `horas registrar` describe en lenguaje natural qué
+  se estaba haciendo (sin marcas técnicas de seguimiento); los partes 348–353
+  de QA quedaron reescritos así (SKILL.md y ARQUITECTURA sincronizados).
 
 ## [1.0.0-rc1] — 2026-09-10
 

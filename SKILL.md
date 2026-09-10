@@ -100,7 +100,7 @@ porque el ratio de desviación depende de quién estima.
 | `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
 | `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
-| `horas registrar ID --horas X` | escritura | dry-run → `--confirm` |
+| `horas registrar ID --horas X --nota "..."` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo |
 | `ticket vincular ID --ticket N` | escritura | dry-run → `--confirm` |
 | `calibracion registrar --modelo M ...` | local | entrada de tiempo por tarea |
 | `calibracion stats --modelo M` | local | ratios global y por tipo |
