@@ -150,48 +150,48 @@ Ejecutar en `/tmp` (fuera del repo, se borra después) un snippet mínimo con `x
 
 ### F2-T1 · Constantes y cabecera de `odoo_sync.py`
 Docstring completo, constantes: `CREDENCIALES`, `ESTADOS`, `EDITABLES`, `LECTURA_CRUDA`, `TIPOS_VALIDOS`.
-- [ ] Cabecera y constantes según ARQUITECTURA §4.2, sin funciones aún
+- [x] Cabecera y constantes según ARQUITECTURA §4.2, sin funciones aún
 
 ### F2-T2 · `ok()`, `error()`, `dry_run()` — 🧪 test ANTES
 1. **Crear test N1:** salida JSON `{"ok":true,...}` con exit 0; `{"ok":false,"error":...}` con exit 1; dry_run con `propuesta` y `siguiente_paso` con exit 2.
 2. Implementar las tres funciones.
-- [ ] Test creado y pasando
+- [x] Test creado y pasando
 
 ### F2-T3 · `raiz_repo()` / `carpeta_ia()` — 🧪 test
 1. Test: desde tmp sin `.ia` → exit 1 con error que menciona `.ia` (caso 1.2 de ARQUITECTURA §7.2).
 2. Implementar.
-- [ ] Test creado y pasando
+- [x] Test creado y pasando
 
 ### F2-T4 · `cargar_credenciales()` — 🧪 test
 1. Test con `.env` dummy (valores falsos): parsea KEY=VALUE, ignora comentarios; faltantes → error que lista las 4 variables; variable de entorno tiene prioridad sobre `.env`.
 2. Implementar.
-- [ ] Test creado y pasando (con valores dummy, nunca reales)
+- [x] Test creado y pasando (con valores dummy, nunca reales)
 
 ### F2-T5 · `texto_o_archivo()` — 🧪 test
 Casos: texto directo · `@archivo.md` existente · `@archivo` inexistente → error limpio.
-- [ ] Test creado y pasando
+- [x] Test creado y pasando
 
 ### F2-T6 · `registrar_actividad()` — 🧪 test
 Formato exacto: `fecha | comando | detalle | APLICADO`, append, UTF-8 con acentos.
-- [ ] Test creado y pasando
+- [x] Test creado y pasando
 
 **Commit(s):** uno por tarea o uno por grupo coherente, con Validación `N1 ✅ (n/n)`.
-**Registro de Fase 2:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 2:** fecha: 2026-09-09 · est. 2h · real 1h · notas: batería N1 13/13 en verde; commits `7d457ef` (esqueleto + tests)
 
 ---
 
 ## 🚧 GATE G2 — Esqueleto sólido
 
-- [ ] Batería N1 completa en verde, 0 skips
-- [ ] Todos los `open()`/`read_text()`/`write_text()` llevan `encoding="utf-8"`
-- [ ] Cero llamadas a `xmlrpc` en esta fase
-- [ ] Cero `sys.exit` fuera de `ok/error/dry_run`
-- [ ] Cero números mágicos (constantes arriba)
-- [ ] Errores accionables (dicen qué hacer)
-- [ ] Sin dependencias externas
-- [ ] Commits con formato y Validación
+- [x] Batería N1 completa en verde, 0 skips (13/13)
+- [x] Todos los `open()`/`read_text()`/`write_text()` llevan `encoding="utf-8"`
+- [x] Cero llamadas a `xmlrpc` en esta fase
+- [x] Cero `sys.exit` fuera de `ok/error/dry_run`
+- [x] Cero números mágicos (constantes arriba)
+- [x] Errores accionables (dicen qué hacer)
+- [x] Sin dependencias externas
+- [x] Commits con formato y Validación
 
-- [ ] **G2 COMPLETO EN VERDE → puede abrirse la FASE 3**
+- [x] **G2 COMPLETO EN VERDE → puede abrirse la FASE 3** — (2026-09-09)
 
 ---
 
@@ -673,6 +673,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 |---|---|---|---|---|---|
 | 0 Entorno | G0 | 2026-09-09 | 2h | 1h30 | ✅ |
 | 1 Repo + docs | G1 | 2026-09-09 | 1h | 30m | ✅ |
+| 2 Esqueleto CLI | G2 | 2026-09-09 | 2h | 1h | ✅ |
 | 2 Esqueleto CLI | G2 | | | | ☐ |
 | 3 Conexión + doctor | G3 | | | | ☐ |
 | 4 Lecturas | G4 | | | | ☐ |
