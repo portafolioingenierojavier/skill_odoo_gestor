@@ -970,6 +970,8 @@ Instancias generadas desde plantillas. La calibración es **un archivo por model
 5. Crear proyecto de pruebas **QA-SKILL** con las etapas estándar (nunca probar escrituras contra el proyecto real).
 
 **En el repo:**
+0. Instalar la skill global: `bash instalar.sh` (symlink a este repo) o
+   `git clone … ~/.config/opencode/skill/odoo-gestor`.
 1. `mkdir -p .ia` y crear `.ia/.env` (§4.6).
 2. Añadir las entradas al `.gitignore` (§4.9).
 3. `python3 odoo_sync.py doctor --proyecto <ID>` → genera `config.json`.

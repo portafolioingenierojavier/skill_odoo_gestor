@@ -300,6 +300,10 @@ cd ~/.config/opencode/skill/odoo-gestor
 python3 -m unittest tests/test_odoo_sync.py -v
 ```
 
+> 💡 **Versión en desarrollo:** desde el repo de desarrollo usa `bash instalar.sh`,
+> que crea el symlink `~/.config/opencode/skill/odoo-gestor` → tu repo (en Windows
+> usa un junction, equivalente transparente).
+
 ### 2 · Prepara Odoo (una vez por servidor)
 
 1. Modo desarrollador → Ajustes → Usuarios → **nuevo usuario «IA Sync»** (interno, grupo *Proyecto/Usuario*).
