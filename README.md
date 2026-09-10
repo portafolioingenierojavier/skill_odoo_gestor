@@ -359,13 +359,16 @@ estado en 3 líneas y confirma qué tarea se retoma.
 - [x] `SKILL.md`: reglas, arranque de sesión, ciclo de tarea, protocolo de tiempo
 - [x] Plantillas de FOCO y calibración
 - [x] Tests unitarios — nivel 1 sin Odoo (**50/50 en verde**)
-- [x] Plan de validación de 3 niveles (`tests/INTEGRACION.md`)
-- [x] **Fases 1–9 completas con sus gates G1–G9 en verde**: `now`, `doctor`, tareas,
-  chatter, horas, tickets, calibración de tiempos, `raw` (solo lectura) y auditoría
-  de seguridad 5/5
-- [ ] Fase 10 — **DoD Nivel 2**: instalación vía symlink y regresión total desde
-  cero (batería N0 + N1 + N2, 2.1–2.18) ← **siguiente hito**
-- [ ] Validación nivel 3: comportamiento de la IA en sesión real
+- [x] Plan de validación de 3 niveles (`tests/INTEGRACION.md` con N0, N1 y N2 ejecutados)
+- [x] **Fases 0–11 completas con sus gates G0–G11 en verde**: `now`, `doctor`, tareas,
+  chatter, horas, tickets, calibración de tiempos, `raw` (solo lectura), auditoría
+  de seguridad 5/5, instalación por symlink, regresión total desde cero (N0 6/6 +
+  N1 50/50 + N2 18/18) y nivel 3 de comportamiento de la IA (3.1–3.10 validados en
+  el proyecto dummy `qa-dummy/`)
+- [ ] Fase 12 — **Estreno en el proyecto real + DoD global (G12)**: primera tarea
+  real end-to-end 9/9 y resumen validado a nivel ejecutivo ← **única etapa de
+  desarrollo pendiente**
+- [ ] Fase 13 — post-estreno: dogfooding y ajuste de calibración
 - [ ] Primera release etiquetada — `v1.0.0`
 
 ### Ideas futuras

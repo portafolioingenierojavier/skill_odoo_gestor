@@ -556,9 +556,9 @@ AMBER.
 - [x] La IA nunca escribió en Odoo sin dry-run + OK durante TODA la fase
 - [x] La IA nunca mezcló foco de otro proyecto durante TODA la fase (todo en #8)
 - [x] Si hubo correcciones: battery N1+N2 re-ejecutada en verde tras la última (N1 50/50 re-ejecutada; script sin cambios → N2 no re-aplica; 3.1–3.10 re-validados)
-- [ ] CHANGELOG actualizado (1.0.0-rc2 si hubo cambios de SKILL.md)
+- [x] CHANGELOG actualizado — `1.0.0-rc2` (SKILL.md y ARQUITECTURA ajustados en F11)
 
-- [ ] **G11 COMPLETO EN VERDE → puede abrirse la FASE 12 (estreno real)**
+- [x] **G11 COMPLETO EN VERDE → FASE 12 (estreno real) abierta como única etapa pendiente de desarrollo**
 
 ---
 
