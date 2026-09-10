@@ -242,34 +242,34 @@ Formato exacto: `fecha | comando | detalle | APLICADO`, append, UTF-8 con acento
 
 ### F4-T1 · `campos_tarea()` + `proyecto info`
 🧪 Ejecutar N2: 2.4 (etapas con IDs coinciden con el kanban).
-- [ ] 2.4 en verde
+- [x] 2.4 en verde — etapas 27–33 idénticas al kanban; `campos_tarea()` testeado (N1)
 
 ### F4-T2 · `tarea get`
 🧪 Ejecutar N2: tarea existente (campos + `chatter_reciente`) e inexistente → exit 1 limpio.
-- [ ] get funciona en ambos casos
+- [x] get funciona en ambos casos — #57 con `chatter_reciente` (creación); #99999 exit 1
 
 ### F4-T3 · `id_de_etapa()` — extraer matching a función pura
 1. **Refactor:** aislar la comparación case-insensitive exacta en `coincidir_etapa(etapas, nombre)` (pura).
 2. 🧪 Test N1 ANTES: exacta, mayúsculas distintas, no existe (error con lista de válidas).
-- [ ] Función pura extraída, testeada y usada por `id_de_etapa`
+- [x] Función pura extraída, testeada y usada por `id_de_etapa`
 
 ### F4-T4 · `tarea list` (filtros `--etapa`, `--estado`, `--limite`)
 🧪 Ejecutar N2: 2.5 + caso etapa inexistente → error con válidas + caso `--estado` sin campo state (si aplica).
-- [ ] 2.5 en verde
+- [x] 2.5 en verde — 2.5, `--etapa Backlog`, etapa inexistente (exit 1 con lista), `--estado en-progreso --limite 1`. Caso `--estado` sin state: no aplica (QA tiene `state=true`)
 
-**Registro de Fase 4:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 4:** fecha: 2026-09-09 · est. 2h · real 45m · notas: lecturas estables; commit `393f490`; N1 23/23
 
 ---
 
 ## 🚧 GATE G4 — Lecturas fiables
 
-- [ ] N2: 2.4, 2.5 + casos borde en verde
-- [ ] N1 acumulada completa en verde
-- [ ] Ningún comando de lectura produce escritura en Odoo (revisión de código: solo `search_read`/`read`/`fields_get`)
-- [ ] Salidas JSON compactas y consistentes entre comandos
-- [ ] CHANGELOG actualizado
+- [x] N2: 2.4, 2.5 + casos borde en verde
+- [x] N1 acumulada completa en verde — 23/23
+- [x] Ningún comando de lectura produce escritura en Odoo (revisión de código: solo `search_read`/`read`/`fields_get`)
+- [x] Salidas JSON compactas y consistentes entre comandos
+- [x] CHANGELOG actualizado — 0.2.0
 
-- [ ] **G4 COMPLETO EN VERDE → puede abrirse la FASE 5**
+- [x] **G4 COMPLETO EN VERDE → puede abrirse la FASE 5** — (2026-09-09)
 
 ---
 
@@ -675,6 +675,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 | 1 Repo + docs | G1 | 2026-09-09 | 1h | 30m | ✅ |
 | 2 Esqueleto CLI | G2 | 2026-09-09 | 2h | 1h | ✅ |
 | 3 Conexión Odoo | G3 | 2026-09-09 | 3h | 1h30 | ✅ |
+| 4 Lecturas | G4 | 2026-09-09 | 2h | 45m | ✅ |
 | 2 Esqueleto CLI | G2 | | | | ☐ |
 | 3 Conexión + doctor | G3 | | | | ☐ |
 | 4 Lecturas | G4 | | | | ☐ |
