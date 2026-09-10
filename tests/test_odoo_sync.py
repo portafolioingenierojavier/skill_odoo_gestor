@@ -229,6 +229,50 @@ class TestTextoOArchivo(unittest.TestCase):
         self.assertIn("no-existe.md", captured["mensaje"])
 
 
+class TestNow(unittest.TestCase):
+    """F3-T2: comando now (caso 1.1)."""
+
+    def test_now_formato_iso_y_campos(self):
+        with tempfile.TemporaryDirectory() as d:     # no necesita .ia/
+            r = correr(["now"], d)
+        self.assertEqual(r.returncode, 0)
+        data = json.loads(r.stdout)["data"]
+        datetime.fromisoformat(data["ahora"])   # falla si no es ISO
+        self.assertIn("zona_horaria", data)
+        self.assertGreater(data["epoch"], 0)
+        # zona_horaria coincide con el reloj local
+        self.assertEqual(data["zona_horaria"],
+                         datetime.now().astimezone().tzname())
+
+
+class TestConstruirConfig(unittest.TestCase):
+    """F3-T3: estructura de .ia/config.json que genera doctor."""
+
+    def test_claves_obligatorias_y_etapas_mapeadas(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 27, "name": "Backlog"}, {"id": 31, "name": "Entregado"}]
+        cfg = mod.construir_config(7,
+                                   {"asignacion": "user_ids", "planned_hours": True,
+                                    "state": True, "tickets": []},
+                                   etapas, "timesheet")
+        self.assertEqual(cfg["proyecto_id"], 7)
+        self.assertEqual(cfg["campos"]["asignacion"], "user_ids")
+        self.assertEqual(cfg["modo_horas"], "timesheet")
+        self.assertEqual(cfg["etapas"], {"Backlog": 27, "Entregado": 31})
+        self.assertEqual(cfg["umbral_desviacion_pct"], 25)
+        self.assertIn("FEAT", cfg["convencion"]["tipos"])
+        self.assertEqual(cfg["convencion"]["formato"], "[TIPO] titulo ejecutivo")
+
+    def test_sin_state_estados_none(self):
+        mod = cargar_modulo()
+        cfg = mod.construir_config(7,
+                                   {"asignacion": "user_id", "planned_hours": False,
+                                    "state": False, "tickets": []},
+                                   [], "solo-registro")
+        self.assertIsNone(cfg["estados"])
+        self.assertEqual(cfg["modo_horas"], "solo-registro")
+
+
 class TestRegistrarActividad(unittest.TestCase):
     """F2-T6: registrar_actividad()."""
 

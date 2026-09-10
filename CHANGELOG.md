@@ -2,6 +2,17 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [0.1.0] — 2026-09-09
+
+### Añadido
+- Clase `Odoo`: conexión XML-RPC (`version`, `authenticate`), `ejec` con manejo
+  centralizado de `Fault`, `buscar` (lecturas).
+- Comando `now`: reloj exacto (ISO, `zona_horaria`, `epoch`).
+- Comando `doctor --proyecto <ID>`: diagnóstico de campos, módulo `hr_timesheet`,
+  usuario, proyectos, etapas; escribe `.ia/config.json`.
+- Config de QA generado por `doctor` y versionado (`.ia/config.json`).
+- Tests N1 de `now` y de la estructura del config.
+
 ## [0.0.0] — 2026-09-09
 
 ### Añadido

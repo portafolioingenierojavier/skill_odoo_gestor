@@ -1,0 +1,42 @@
+{
+  "proyecto_id": 7,
+  "creado": "2026-09-09",
+  "campos": {
+    "asignacion": "user_ids",
+    "planned_hours": false,
+    "state": true,
+    "tickets": []
+  },
+  "modo_horas": "timesheet",
+  "etapas": {
+    "Backlog": 27,
+    "Especificaciones": 28,
+    "En desarrollo": 29,
+    "En pruebas": 30,
+    "Revisión": 31,
+    "Entregado": 32,
+    "Cancelado": 33
+  },
+  "estados": {
+    "en-progreso": "01_in_progress",
+    "espera": "02_waiting_normal",
+    "cambios": "02_changes_requested",
+    "aprobado": "03_approved",
+    "hecho": "1_done",
+    "cancelado": "1_canceled"
+  },
+  "umbral_desviacion_pct": 25,
+  "convencion": {
+    "formato": "[TIPO] titulo ejecutivo",
+    "tipos": [
+      "FEAT",
+      "FIX",
+      "REF",
+      "DOC",
+      "OPS",
+      "SEC",
+      "TST",
+      "CHK"
+    ]
+  }
+}

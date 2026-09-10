@@ -12,16 +12,20 @@ Escrituras   : solo whitelist de campos y en dos fases (dry-run → --confirm).
 Credenciales : .ia/.env o variables de entorno (nunca versionadas).
 Dependencias : únicamente la librería estándar de Python.
 """
+import argparse
 import datetime as dt
 import json
 import os
 import re
 import sys
+import xmlrpc.client
 from pathlib import Path
 
 # ------------------------------------------------------------------ constantes
 
 CREDENCIALES = ("ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY")
+
+UMBRAL_DESVIACION_PCT = 25  # aviso de desviación en `doctor` (config.json)
 
 ESTADOS = {  # alias amigable → valor del campo state (Odoo 16+)
     "en-progreso": "01_in_progress",
@@ -105,6 +109,14 @@ def registrar_actividad(comando, detalle):
                 f"{comando} | {detalle} | APLICADO\n")
 
 
+def cargar_config():
+    f = carpeta_ia() / "config.json"
+    if not f.exists():
+        error("No existe .ia/config.json. Ejecuta primero: "
+              "odoo_sync.py doctor --proyecto <ID>")
+    return json.loads(f.read_text(encoding="utf-8"))
+
+
 def texto_o_archivo(valor):
     """Texto directo o '@archivo.md' para textos largos (evita escaping de bash)."""
     if valor and valor.startswith("@"):
@@ -115,8 +127,132 @@ def texto_o_archivo(valor):
     return valor
 
 
+# ------------------------------------------------------------------ cliente
+
+class Odoo:
+    def __init__(self):
+        cred = cargar_credenciales()
+        self.url = cred["ODOO_URL"].rstrip("/")
+        self.db = cred["ODOO_DB"]
+        self._key = cred["ODOO_API_KEY"]
+        try:
+            self.common = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/common")
+            info = self.common.version()
+            self.version = info.get("server_version", "?")
+            self.uid = self.common.authenticate(self.db, cred["ODOO_USER"],
+                                                self._key, {})
+        except Exception as exc:
+            error(f"No se pudo contactar con Odoo en {self.url}: {exc}")
+        if not self.uid:
+            error("Autenticación fallida: revisa ODOO_USER y ODOO_API_KEY")
+        self.models = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/object")
+
+    def ejec(self, modelo, metodo, *args, **kws):
+        # Los callers pasan el dict de params (fields, attributes, valores de
+        # write...) como ÚLTIMO argumento posicional. Se extrae como kwargs de
+        # execute_kw para respetar la semántica XML-RPC.
+        if args and isinstance(args[-1], dict):
+            params = args[-1]
+            args = args[:-1]
+        else:
+            params = {}
+        params.update(kws)
+        try:
+            return self.models.execute_kw(self.db, self.uid, self._key,
+                                          modelo, metodo, list(args), params)
+        except xmlrpc.client.Fault as fault:
+            error(f"Odoo rechazó {modelo}.{metodo}: "
+                  f"{str(fault.faultString)[:300].strip()}")
+
+    def buscar(self, modelo, dominio, campos, limite=100, orden=None):
+        kwargs = {"fields": campos, "limit": limite}
+        if orden:
+            kwargs["order"] = orden
+        return self.ejec(modelo, "search_read", dominio, kwargs)
+
+
+# ------------------------------------------------------------------ comandos
+
+def cmd_now(_):
+    ahora = dt.datetime.now()
+    ok({"ahora": ahora.isoformat(timespec="seconds"),
+        "zona_horaria": dt.datetime.now().astimezone().tzname(),
+        "epoch": int(ahora.timestamp())})
+
+
+def construir_config(pid, deteccion, etapas, modo_horas):
+    """Versión pura del config: permitir test N1 sin conexión a Odoo."""
+    return {"proyecto_id": pid,
+            "creado": dt.date.today().isoformat(),
+            "campos": deteccion,
+            "modo_horas": modo_horas,
+            "etapas": {e["name"]: e["id"] for e in etapas},
+            "estados": dict(ESTADOS) if deteccion["state"] else None,
+            "umbral_desviacion_pct": UMBRAL_DESVIACION_PCT,
+            "convencion": {"formato": "[TIPO] titulo ejecutivo",
+                           "tipos": list(TIPOS_VALIDOS)}}
+
+
+def cmd_doctor(args):
+    odoo = Odoo()
+    campos = odoo.ejec("project.task", "fields_get", [],
+                       {"attributes": ["type", "relation"]})
+    deteccion = {
+        "asignacion": "user_ids" if "user_ids" in campos
+                      else ("user_id" if "user_id" in campos else None),
+        "planned_hours": "planned_hours" in campos,
+        "state": "state" in campos,
+        "tickets": sorted(c for c in campos if "ticket" in c.lower()),
+    }
+    modulos = odoo.buscar("ir.module.module",
+                          [["name", "in", ["hr_timesheet"]],
+                           ["state", "=", "installed"]], ["name"])
+    modo_horas = "timesheet" if modulos else "solo-registro"
+    usuario = odoo.ejec("res.users", "read", [odoo.uid],
+                        {"fields": ["name"]})[0]
+    resultado = {"version_odoo": odoo.version, "uid": odoo.uid,
+                 "usuario": usuario["name"], "campos_detectados": deteccion,
+                 "modo_horas": modo_horas,
+                 "proyectos": odoo.buscar("project.project", [], ["id", "name"])}
+    if args.proyecto:
+        etapas = odoo.buscar("project.task.type",
+                             [["project_ids", "in", [args.proyecto]]],
+                             ["id", "name", "fold", "sequence"], orden="sequence")
+        resultado["etapas_del_proyecto"] = etapas
+        cfg = construir_config(args.proyecto, deteccion, etapas, modo_horas)
+        (carpeta_ia() / "config.json").write_text(
+            json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+        resultado["config_escrito"] = str(carpeta_ia() / "config.json")
+        if not etapas:
+            resultado["aviso"] = ("El proyecto no tiene etapas: créalas en Odoo "
+                                  "y vuelve a correr doctor.")
+    ok(resultado)
+
+
+# ------------------------------------------------------------------ entrada
+
+def construir_parser():
+    p = argparse.ArgumentParser(
+        prog="odoo_sync.py",
+        description="Puente Open Code ↔ Odoo de la skill odoo-gestor. "
+                    "Salida JSON. Escrituras en dos fases: dry-run (exit 2) → --confirm.")
+    sub = p.add_subparsers(dest="grupo", required=True)
+
+    sub.add_parser("now", help="Reloj exacto (única fuente de verdad del tiempo)")
+
+    doc = sub.add_parser("doctor", help="Diagnóstico de conexión, campos y módulos")
+    doc.add_argument("--proyecto", type=int,
+                     help="ID del proyecto: además escribe .ia/config.json")
+    return p
+
+
+def main():
+    args = construir_parser().parse_args()
+    if args.grupo == "now":
+        cmd_now(args)
+    elif args.grupo == "doctor":
+        cmd_doctor(args)
+
+
 if __name__ == "__main__":
-    # Fase 2: aún sin parser de comandos. El contrato JSON y los exit codes
-    # ya están en ok()/error()/dry_run(); los comandos llegan en F3+.
-    error("odoo_sync aún no implementa comandos (Fase 2 en curso). "
-          "Los comandos (now, doctor, tarea, ...) se añaden en F3 en adelante.")
+    main()
