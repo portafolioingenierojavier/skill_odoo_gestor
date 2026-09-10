@@ -200,7 +200,7 @@ Formato exacto: `fecha | comando | detalle | APLICADO`, append, UTF-8 con acento
 ### F3-T1 · Clase `Odoo`
 1. Implementar `__init__` (conexión, `version()`, `authenticate`), `ejec` (manejo centralizado de `Fault` → error JSON truncado), `buscar`.
 2. 🧪 Ejecutar N2: caso 2.3 (API key inválida → exit 1 «Autenticación fallida», sin traceback).
-- [x] Conexión y manejo de errores verificados contra QA — N2 2.3 ✅ (corrección: `ejec` extrae el dict de params final posicional para respetar semántica XML-RPC)
+- [x] Conexión y manejo de errores verificados contra QA — N2 2.3 ✅ (corrección definitiva en F5: `ejec` pasa los args como van; `read`/`fields_get`/`search_read` usan keywords explícitas y `write` conserva el dict de valores posicional)
 
 ### F3-T2 · Comando `now` — 🧪 test ANTES
 1. Test N1: formato ISO, presencia de `zona_horaria` y `epoch` (caso 1.1).
@@ -278,45 +278,46 @@ Formato exacto: `fecha | comando | detalle | APLICADO`, append, UTF-8 con acento
 > Fase crítica: aquí se instala el mecanismo de seguridad. Cada comando se valida con la tríada: **exit 2 sin confirm / nada cambió en Odoo / exit 0 + línea en `actividad.log` con confirm**.
 
 ### F5-T1 · `tarea crear` — 🧪 test de la validación de nombre ANTES
-1. Extraer `validar_convencion(nombre)` (regex `^\[[A-Z]+\]\s+\S`) como función pura + test N1 (válido, inválido).
-2. Implementar comando completo: dry-run con `valores` + `advertencias`, confirm → create + log.
-3. 🧪 Ejecutar N2: 2.6 (exit 2, tarea NO existe en Odoo) y 2.7 (exit 0, tarea en 1ª etapa, línea en log).
-- [ ] 2.6 y 2.7 en verde · advertencia de convención probada
+1. Extraído `validar_convencion(nombre)` (regex `^\[[A-Z]+\]\s+\S`) como función pura + test N1 (2 casos).
+2. Comando completo: dry-run con `valores` + `advertencias`, confirm → create + log.
+3. 🧪 N2 2.6 (exit 2, 0 tareas en Odoo) y 2.7 (exit 0, tarea en 1ª etapa Backlog, línea en log) ✅.
+- [x] 2.6 y 2.7 en verde · advertencia de convención probada
 
 ### F5-T2 · `tarea editar` — 🧪 parser de `--set` ANTES
-1. Extraer `parsear_set(pares)` pura + test N1: `CAMPO=VALOR` válido · campo fuera de whitelist → error con permitidos · `planned_hours` numérico y no numérico.
-2. Implementar: dry-run muestra `de → a`, confirm + log.
-3. 🧪 Ejecutar N2: editar name y planned_hours; verificar en Odoo y en log.
-- [ ] Parser testeado · edición aplicada y logueada
+1. Extraído `parsear_set(pares)` pura + 5 tests N1 (válido · whitelist con permitidos · planned_hours numérico/no). 
+2. Implementado: dry-run muestra `de → a`, confirm + log.
+3. 🧪 N2: editar name (dry exit 2 → confirm exit 0, renombrada en Odoo + log) ✅ · `planned_hours` n/a: el campo NO existe en esta instancia → error limpio exit 1 (documentado en G3).
+- [x] Parser testeado · edición aplicada y logueada (name; planned_hours no aplica en QA)
 
 ### F5-T3 · `tarea etapa`
-🧪 Ejecutar N2: 2.8 (exit 2, sin cambio — verificar con `tarea get`), 2.9 (exit 0, cambio + log), 2.10 (etapa inexistente → exit 1 con lista).
-- [ ] 2.8, 2.9, 2.10 en verde
+🧪 N2: 2.8 (exit 2, `tarea get` confirma sin cambio) ✅ · 2.9 (exit 0, En pruebas=30 + log) ✅ · 2.10 (etapa inexistente → exit 1 con lista) ✅.
+- [x] 2.8, 2.9, 2.10 en verde
 
 ### F5-T4 · `tarea estado`
-🧪 Ejecutar N2: 2.11 (dry-run → confirm → «En espera» visible en Odoo) + caso instancia sin `state` → error que sugiere `tarea etapa`.
-- [ ] 2.11 en verde · fallback correcto
+🧪 N2 2.11 (dry → confirm → «En espera»/`04_waiting_normal` visible en Odoo) ✅ + fallback sin `state` constatado (exit 1 → «usa tarea etapa») ✅.
+> Nota: la selección REAL de la instancia difiere del clásico (`espera`=`04_waiting_normal`, `hecho`=`1_done`, `cancelado`=`1_canceled`). `ESTADOS` corregido según `fields_get(selection)` y `config.json` regenerado con doctor.
+- [x] 2.11 en verde · fallback correcto
 
 ### F5-T5 · Verificación integral del mecanismo de dos fases
-Ejecutar manualmente la secuencia completa de un comando cualquiera y constatar los tres efectos: exit 2 sin confirm / Odoo intacto / exit 0 + `actividad.log` con formato exacto.
-- [ ] Tríada verificada para crear, editar, etapa y estado (4/4)
+Tríada (exit 2 sin confirm / Odoo intacto / exit 0 + `actividad.log`) constatada para los 4 comandos.
+- [x] Tríada verificada para crear, editar, etapa y estado (4/4)
 
-**Registro de Fase 5:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 5:** fecha 2026-09-10 · est. 1h00 · real 1h15 · notas: `ejec` passthrough + keywords; write conserva dict posicional (fault `write() unexpected keyword argument` detectado y resuelto N2); estado corregido según selección real.
 
 ---
 
 ## 🚧 GATE G5 — Escrituras seguras (gate reforzado)
 
-- [ ] N2: 2.6–2.11 en verde
-- [ ] N1 acumulada en verde (incluye `validar_convencion`, `parsear_set`)
-- [ ] **Cada escritura deja línea en `actividad.log`** (verificado 4/4 comandos)
-- [ ] **Ninguna escritura ocurre sin `--confirm`** (verificado 4/4)
-- [ ] Whitelist `EDITABLES` respetada (test + revisión de código)
-- [ ] Validación de entrada completa ANTES de la primera llamada que escribe (revisión de código)
-- [ ] `actividad.log` libre de secretos
-- [ ] CHANGELOG actualizado
+- [x] N2: 2.6–2.11 en verde
+- [x] N1 acumulada en verde (30/30, incluye `validar_convencion`, `parsear_set`)
+- [x] **Cada escritura deja línea en `actividad.log`** (verificado 4/4 comandos)
+- [x] **Ninguna escritura ocurre sin `--confirm`** (verificado 4/4)
+- [x] Whitelist `EDITABLES` respetada (test + revisión de código)
+- [x] Validación de entrada completa ANTES de la primera llamada que escribe (revisión de código)
+- [x] `actividad.log` libre de secretos
+- [x] CHANGELOG actualizado
 
-- [ ] **G5 COMPLETO EN VERDE → puede abrirse la FASE 6**
+- [x] **G5 COMPLETO EN VERDE → puede abrirse la FASE 6**
 
 ---
 

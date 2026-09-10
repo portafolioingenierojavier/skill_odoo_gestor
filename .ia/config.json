@@ -1,6 +1,6 @@
 {
   "proyecto_id": 7,
-  "creado": "2026-09-09",
+  "creado": "2026-09-10",
   "campos": {
     "asignacion": "user_ids",
     "planned_hours": false,
@@ -19,7 +19,7 @@
   },
   "estados": {
     "en-progreso": "01_in_progress",
-    "espera": "02_waiting_normal",
+    "espera": "04_waiting_normal",
     "cambios": "02_changes_requested",
     "aprobado": "03_approved",
     "hecho": "1_done",

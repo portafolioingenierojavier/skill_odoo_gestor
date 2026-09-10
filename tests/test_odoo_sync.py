@@ -344,6 +344,74 @@ class TestCamposTarea(unittest.TestCase):
         self.assertNotIn("state", campos)
 
 
+class TestValidarConvencion(unittest.TestCase):
+    """F5-T1: validar_convencion() pura."""
+
+    def test_valido(self):
+        mod = cargar_modulo()
+        self.assertTrue(mod.validar_convencion("[FEAT] Crear modulo de facturas"))
+        self.assertTrue(mod.validar_convencion("[TST] Prueba N1"))
+
+    def test_invalido(self):
+        mod = cargar_modulo()
+        self.assertFalse(mod.validar_convencion("sin prefijo"))
+        self.assertFalse(mod.validar_convencion("[FEAT]"))
+        self.assertFalse(mod.validar_convencion("[feat] minusculas"))
+
+
+class TestParsearSet(unittest.TestCase):
+    """F5-T2: parsear_set() pura."""
+
+    def _capturar_error(self, mod):
+        captured = {}
+        original = mod.error
+        def fake_error(mensaje, detalle=""):
+            captured["mensaje"] = mensaje
+            raise SystemExit(1)
+        mod.error = fake_error
+        return captured, original
+
+    def test_valido_simple(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.parsear_set(["name=Hola"]), {"name": "Hola"})
+
+    def test_campo_fuera_whitelist_error_con_permitidos(self):
+        mod = cargar_modulo()
+        captured, original = self._capturar_error(mod)
+        try:
+            with self.assertRaises(SystemExit):
+                mod.parsear_set(["project_id=7"])
+        finally:
+            mod.error = original
+        self.assertIn("project_id", captured["mensaje"])
+        self.assertIn("name", captured["mensaje"])
+
+    def test_planned_hours_numerico(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.parsear_set(["planned_hours=2.5"]),
+                         {"planned_hours": 2.5})
+
+    def test_planned_hours_no_numerico_error(self):
+        mod = cargar_modulo()
+        captured, original = self._capturar_error(mod)
+        try:
+            with self.assertRaises(SystemExit):
+                mod.parsear_set(["planned_hours=abc"])
+        finally:
+            mod.error = original
+        self.assertIn("numérico", captured["mensaje"])
+
+    def test_formato_sin_igual_error(self):
+        mod = cargar_modulo()
+        captured, original = self._capturar_error(mod)
+        try:
+            with self.assertRaises(SystemExit):
+                mod.parsear_set(["solo-texto"])
+        finally:
+            mod.error = original
+        self.assertIn("CAMPO=VALOR", captured["mensaje"])
+
+
 class TestRegistrarActividad(unittest.TestCase):
     """F2-T6: registrar_actividad()."""
 

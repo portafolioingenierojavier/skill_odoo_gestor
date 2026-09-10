@@ -2,6 +2,28 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [0.3.0] — 2026-09-10
+
+### Añadido
+- **Fase 5 — Escrituras seguras** (G5 en verde): mecanismo dry-run (exit 2) →
+  `--confirm` (exit 0) → línea en `actividad.log`, verificado para los 4 comandos.
+- `tarea crear` (`--nombre --descripcion --etapa --confirm`): crea en la 1ª
+  etapa por defecto; advertencia si el nombre no sigue la convención `[TIPO]` (N2 2.6/2.7 ✅).
+- `tarea editar --set CAMPO=VALOR` (múltiples, whitelist `EDITABLES`): dry-run
+  muestra `de → a`; confirm aplica y loguea (N2 editar name ✅).
+- `tarea etapa --etapa <nombre>`: dry-run/confirm + error con lista de etapas
+  válidas (N2 2.8/2.9/2.10 ✅).
+- `tarea estado --estado <alias>`: dry-run/confirm; fallback claro si la
+  instancia no expone `state` (N2 2.11 ✅).
+- Funciones puras `validar_convencion()` y `parsear_set()` (+ 7 tests N1).
+
+### Corregido
+- `ejec()` pasa los args tal cual: `read`/`fields_get`/`search_read` usan
+  keywords explícitas y `write` conserva el dict de valores posicional
+  (o rompía con `ProjectTask.write() got an unexpected keyword argument`).
+- `ESTADOS` alineado con la selección real de la instancia Odoo 18
+  (`espera`→`04_waiting_normal`, `hecho`→`1_done`, ...); config regenerado.
+
 ## [0.2.0] — 2026-09-09
 
 ### Añadido

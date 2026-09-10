@@ -220,9 +220,9 @@ import xmlrpc.client
 
 CREDENCIALES = ("ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY")
 
-ESTADOS = {  # alias amigable → valor del campo state (Odoo 16+)
+ESTADOS = {  # alias amigable → valor real del campo state (QA, Odoo 18-20260619)
     "en-progreso": "01_in_progress",
-    "espera": "02_waiting_normal",
+    "espera": "04_waiting_normal",
     "cambios": "02_changes_requested",
     "aprobado": "03_approved",
     "hecho": "1_done",
@@ -354,6 +354,10 @@ class Odoo:
         self.models = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/object")
 
     def ejec(self, modelo, metodo, *args, **kwargs):
+        # Odoo: read/fields_get/search_read aceptan sus opciones como keyword
+        # args (fields=, attributes=, order=...); write/create reciben el dict
+        # de valores como ARGUMENTO posicional. Por eso no se tocan los args:
+        # cada caller sabe qué forma usa.
         try:
             return self.models.execute_kw(self.db, self.uid, self._key,
                                           modelo, metodo, list(args), kwargs)
@@ -365,7 +369,7 @@ class Odoo:
         kwargs = {"fields": campos, "limit": limite}
         if orden:
             kwargs["order"] = orden
-        return self.ejec(modelo, "search_read", dominio, kwargs)
+        return self.ejec(modelo, "search_read", dominio, **kwargs)
 
 def conexion_y_config():
     return Odoo(), cargar_config()
@@ -381,7 +385,7 @@ def cmd_now(_):
 def cmd_doctor(args):
     odoo = Odoo()
     campos = odoo.ejec("project.task", "fields_get", [],
-                       {"attributes": ["type", "relation"]})
+                       attributes=["type", "relation"])
     deteccion = {
         "asignacion": "user_ids" if "user_ids" in campos
                       else ("user_id" if "user_id" in campos else None),
@@ -394,7 +398,7 @@ def cmd_doctor(args):
                            ["state", "=", "installed"]], ["name"])
     modo_horas = "timesheet" if modulos else "solo-registro"
     usuario = odoo.ejec("res.users", "read", [odoo.uid],
-                        {"fields": ["name"]})[0]
+                        fields=["name"])[0]
     resultado = {"version_odoo": odoo.version, "uid": odoo.uid,
                  "usuario": usuario["name"], "campos_detectados": deteccion,
                  "modo_horas": modo_horas,
@@ -424,7 +428,7 @@ def cmd_proyecto_info(_):
     odoo, cfg = conexion_y_config()
     pid = cfg["proyecto_id"]
     datos = odoo.ejec("project.project", "read", [pid],
-                      {"fields": ["name", "date_start", "date", "active"]})[0]
+                      fields=["name", "date_start", "date", "active"])[0]
     etapas = odoo.buscar("project.task.type", [["project_ids", "in", [pid]]],
                          ["id", "name", "fold", "sequence"], orden="sequence")
     ok({"proyecto": datos, "etapas": etapas})
@@ -432,7 +436,7 @@ def cmd_proyecto_info(_):
 def cmd_tarea_get(args):
     odoo, cfg = conexion_y_config()
     tareas = odoo.ejec("project.task", "read", [args.id],
-                       {"fields": campos_tarea(cfg)})
+                       fields=campos_tarea(cfg))
     if not tareas:
         error(f"No existe (o no puedes ver) la tarea {args.id}")
     mensajes = odoo.buscar("mail.message",
@@ -477,10 +481,10 @@ def cmd_tarea_crear(args):
     registrar_actividad("tarea crear", f"#{nuevo} «{args.nombre}»")
     ok({"id": nuevo, "nombre": args.nombre})
 
-def cmd_tarea_editar(args):
-    odoo, _ = conexion_y_config()
-    pares = {}
-    for par in args.set:
+def parsear_set(pares):
+    """Convierte CAMPO=VALOR en dict validado y con coerción de tipos."""
+    resultado = {}
+    for par in pares:
         if "=" not in par:
             error(f"Formato inválido (CAMPO=VALOR): {par}")
         campo, valor = par.split("=", 1)
@@ -488,14 +492,18 @@ def cmd_tarea_editar(args):
             error(f"Campo no editable: {campo}. Permitidos: {', '.join(EDITABLES)}")
         if campo == "planned_hours":
             try:
-                valor = float(valor)
+                resultado[campo] = float(valor)
             except ValueError:
                 error(f"planned_hours debe ser numérico: {valor}")
         else:
-            valor = texto_o_archivo(valor)
-        pares[campo] = valor
+            resultado[campo] = texto_o_archivo(valor)
+    return resultado
+
+def cmd_tarea_editar(args):
+    odoo, _ = conexion_y_config()
+    pares = parsear_set(args.set)
     actuales = odoo.ejec("project.task", "read", [args.id],
-                         {"fields": sorted(pares)})
+                         fields=sorted(pares))
     if not actuales:
         error(f"No existe la tarea {args.id}")
     propuesta = {"accion": "editar tarea", "id": args.id,
@@ -511,7 +519,7 @@ def cmd_tarea_etapa(args):
     odoo, cfg = conexion_y_config()
     etapa = id_de_etapa(odoo, cfg, args.etapa)
     actual = odoo.ejec("project.task", "read", [args.id],
-                       {"fields": ["name", "stage_id"]})
+                       fields=["name", "stage_id"])
     if not actual:
         error(f"No existe la tarea {args.id}")
     propuesta = {"accion": "cambiar etapa",
@@ -661,14 +669,14 @@ def cmd_raw(args):
     campos = args.campos.split(",") if args.campos else []
     if args.metodo == "read":
         ids = [int(x) for x in args.ids.split(",")]
-        ok({"registros": odoo.ejec(args.modelo, "read", ids, {"fields": campos})})
+        ok({"registros": odoo.ejec(args.modelo, "read", ids, fields=campos)})
     if args.metodo == "search_count":
         ok({"total": odoo.ejec(args.modelo, "search_count", dominio)})
     if args.metodo == "fields_get":
         ok({"campos": sorted(odoo.ejec(args.modelo, "fields_get", [],
-                                       {"attributes": ["string"]}))})
+                                       attributes=["string"]))})
     ok({"registros": odoo.ejec(args.modelo, "search_read", dominio,
-                               {"fields": campos, "limit": args.limite})})
+                               fields=campos, limit=args.limite)})
 
 # ------------------------------------------------------------------ entrada
 
@@ -831,7 +839,7 @@ Razón de ser: cabecera estándar del archivo por modelo. La crea el primer `cal
   "modo_horas": "timesheet",
   "etapas": {"Backlog": 10, "Especificaciones": 11, "En desarrollo": 12,
              "En pruebas": 13, "Revisión": 14, "Entregado": 15},
-  "estados": {"en-progreso": "01_in_progress", "espera": "02_waiting_normal",
+  "estados": {"en-progreso": "01_in_progress", "espera": "04_waiting_normal",
               "hecho": "1_done", "cancelado": "1_canceled"},
   "umbral_desviacion_pct": 25,
   "convencion": {"formato": "[TIPO] titulo ejecutivo",

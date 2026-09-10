@@ -27,9 +27,9 @@ CREDENCIALES = ("ODOO_URL", "ODOO_DB", "ODOO_USER", "ODOO_API_KEY")
 
 UMBRAL_DESVIACION_PCT = 25  # aviso de desviación en `doctor` (config.json)
 
-ESTADOS = {  # alias amigable → valor del campo state (Odoo 16+)
+ESTADOS = {  # alias amigable → valor real del campo state (QA, Odoo 18-20260619)
     "en-progreso": "01_in_progress",
-    "espera": "02_waiting_normal",
+    "espera": "04_waiting_normal",
     "cambios": "02_changes_requested",
     "aprobado": "03_approved",
     "hecho": "1_done",
@@ -149,6 +149,30 @@ def campos_tarea(cfg):
     return campos
 
 
+def validar_convencion(nombre):
+    """True si el nombre sigue la convención `[TIPO] titulo ejecutivo`."""
+    return re.match(r"^\[[A-Z]+\]\s+\S", nombre) is not None
+
+
+def parsear_set(pares):
+    """Convierte CAMPO=VALOR en dict validado y coerción de tipos."""
+    resultado = {}
+    for par in pares:
+        if "=" not in par:
+            error(f"Formato inválido (CAMPO=VALOR): {par}")
+        campo, valor = par.split("=", 1)
+        if campo not in EDITABLES:
+            error(f"Campo no editable: {campo}. Permitidos: {', '.join(EDITABLES)}")
+        if campo == "planned_hours":
+            try:
+                resultado[campo] = float(valor)
+            except ValueError:
+                error(f"planned_hours debe ser numérico: {valor}")
+        else:
+            resultado[campo] = texto_o_archivo(valor)
+    return resultado
+
+
 def texto_o_archivo(valor):
     """Texto directo o '@archivo.md' para textos largos (evita escaping de bash)."""
     if valor and valor.startswith("@"):
@@ -179,19 +203,14 @@ class Odoo:
             error("Autenticación fallida: revisa ODOO_USER y ODOO_API_KEY")
         self.models = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/object")
 
-    def ejec(self, modelo, metodo, *args, **kws):
-        # Los callers pasan el dict de params (fields, attributes, valores de
-        # write...) como ÚLTIMO argumento posicional. Se extrae como kwargs de
-        # execute_kw para respetar la semántica XML-RPC.
-        if args and isinstance(args[-1], dict):
-            params = args[-1]
-            args = args[:-1]
-        else:
-            params = {}
-        params.update(kws)
+    def ejec(self, modelo, metodo, *args, **kwargs):
+        # Odoo: read/fields_get/search_read aceptan sus opciones como keyword
+        # args (fields=, attributes=, order=...); write/create reciben el dict
+        # de valores como ARGUMENTO posicional. Por eso aquí no se tocan los
+        # args: cada caller sabe qué forma usa.
         try:
             return self.models.execute_kw(self.db, self.uid, self._key,
-                                          modelo, metodo, list(args), params)
+                                          modelo, metodo, list(args), kwargs)
         except xmlrpc.client.Fault as fault:
             error(f"Odoo rechazó {modelo}.{metodo}: "
                   f"{str(fault.faultString)[:300].strip()}")
@@ -200,7 +219,7 @@ class Odoo:
         kwargs = {"fields": campos, "limit": limite}
         if orden:
             kwargs["order"] = orden
-        return self.ejec(modelo, "search_read", dominio, kwargs)
+        return self.ejec(modelo, "search_read", dominio, **kwargs)
 
 
 # ------------------------------------------------------------------ comandos
@@ -228,7 +247,7 @@ def construir_config(pid, deteccion, etapas, modo_horas):
 def cmd_doctor(args):
     odoo = Odoo()
     campos = odoo.ejec("project.task", "fields_get", [],
-                       {"attributes": ["type", "relation"]})
+                       attributes=["type", "relation"])
     deteccion = {
         "asignacion": "user_ids" if "user_ids" in campos
                       else ("user_id" if "user_id" in campos else None),
@@ -241,7 +260,7 @@ def cmd_doctor(args):
                            ["state", "=", "installed"]], ["name"])
     modo_horas = "timesheet" if modulos else "solo-registro"
     usuario = odoo.ejec("res.users", "read", [odoo.uid],
-                        {"fields": ["name"]})[0]
+                        fields=["name"])[0]
     resultado = {"version_odoo": odoo.version, "uid": odoo.uid,
                  "usuario": usuario["name"], "campos_detectados": deteccion,
                  "modo_horas": modo_horas,
@@ -269,7 +288,7 @@ def cmd_proyecto_info(_):
     odoo, cfg = conexion_y_config()
     pid = cfg["proyecto_id"]
     datos = odoo.ejec("project.project", "read", [pid],
-                      {"fields": ["name", "date_start", "date", "active"]})[0]
+                      fields=["name", "date_start", "date", "active"])[0]
     etapas = odoo.buscar("project.task.type", [["project_ids", "in", [pid]]],
                          ["id", "name", "fold", "sequence"], orden="sequence")
     ok({"proyecto": datos, "etapas": etapas})
@@ -278,7 +297,7 @@ def cmd_proyecto_info(_):
 def cmd_tarea_get(args):
     odoo, cfg = conexion_y_config()
     tareas = odoo.ejec("project.task", "read", [args.id],
-                       {"fields": campos_tarea(cfg)})
+                       fields=campos_tarea(cfg))
     if not tareas:
         error(f"No existe (o no puedes ver) la tarea {args.id}")
     mensajes = odoo.buscar("mail.message",
@@ -302,6 +321,77 @@ def cmd_tarea_list(args):
     if cfg.get("campos", {}).get("state"):
         campos.append("state")
     ok({"tareas": odoo.buscar("project.task", dominio, campos, limite=args.limite)})
+
+
+def cmd_tarea_crear(args):
+    odoo, cfg = conexion_y_config()
+    vals = {"name": args.nombre, "project_id": cfg["proyecto_id"]}
+    if args.descripcion:
+        vals["description"] = texto_o_archivo(args.descripcion)
+    if args.horas is not None:
+        vals["planned_hours"] = args.horas
+    if args.etapa:
+        vals["stage_id"] = id_de_etapa(odoo, cfg, args.etapa)["id"]
+    elif cfg.get("etapas"):
+        vals["stage_id"] = next(iter(cfg["etapas"].values()))
+    advertencias = []
+    if not validar_convencion(args.nombre):
+        advertencias.append("El nombre no sigue la convención [TIPO] título")
+    propuesta = {"accion": "crear tarea", "valores": vals, "advertencias": advertencias}
+    if not args.confirm:
+        dry_run(propuesta)
+    nuevo = odoo.ejec("project.task", "create", [vals])
+    registrar_actividad("tarea crear", f"#{nuevo} «{args.nombre}»")
+    ok({"id": nuevo, "nombre": args.nombre})
+
+
+def cmd_tarea_editar(args):
+    odoo, _ = conexion_y_config()
+    pares = parsear_set(args.set)
+    actuales = odoo.ejec("project.task", "read", [args.id],
+                         fields=sorted(pares))
+    if not actuales:
+        error(f"No existe la tarea {args.id}")
+    propuesta = {"accion": "editar tarea", "id": args.id,
+                 "cambios": {c: {"de": actuales[0].get(c), "a": v}
+                             for c, v in pares.items()}}
+    if not args.confirm:
+        dry_run(propuesta)
+    odoo.ejec("project.task", "write", [args.id], pares)
+    registrar_actividad("tarea editar", f"#{args.id} campos={list(pares)}")
+    ok({"id": args.id, "actualizado": list(pares)})
+
+
+def cmd_tarea_etapa(args):
+    odoo, cfg = conexion_y_config()
+    etapa = id_de_etapa(odoo, cfg, args.etapa)
+    actual = odoo.ejec("project.task", "read", [args.id],
+                       fields=["name", "stage_id"])
+    if not actual:
+        error(f"No existe la tarea {args.id}")
+    propuesta = {"accion": "cambiar etapa",
+                 "tarea": f"#{args.id} «{actual[0]['name']}»",
+                 "de": actual[0]["stage_id"],
+                 "a": {"id": etapa["id"], "nombre": etapa["name"]}}
+    if not args.confirm:
+        dry_run(propuesta)
+    odoo.ejec("project.task", "write", [args.id], {"stage_id": etapa["id"]})
+    registrar_actividad("tarea etapa", f"#{args.id} → «{etapa['name']}»")
+    ok({"id": args.id, "etapa": etapa["name"]})
+
+
+def cmd_tarea_estado(args):
+    odoo, cfg = conexion_y_config()
+    if not cfg.get("estados"):
+        error("El campo state no está disponible: usa tarea etapa")
+    valor = ESTADOS[args.estado]
+    propuesta = {"accion": "cambiar estado", "tarea": f"#{args.id}",
+                 "estado": args.estado, "valor_odoo": valor}
+    if not args.confirm:
+        dry_run(propuesta)
+    odoo.ejec("project.task", "write", [args.id], {"state": valor})
+    registrar_actividad("tarea estado", f"#{args.id} → {args.estado}")
+    ok({"id": args.id, "estado": args.estado})
 
 
 # ------------------------------------------------------------------ entrada
@@ -330,6 +420,24 @@ def construir_parser():
     l.add_argument("--etapa")
     l.add_argument("--estado", choices=list(ESTADOS))
     l.add_argument("--limite", type=int, default=50)
+    c = t.add_parser("crear")
+    c.add_argument("--nombre", required=True)
+    c.add_argument("--descripcion")
+    c.add_argument("--horas", type=float)
+    c.add_argument("--etapa")
+    c.add_argument("--confirm", action="store_true")
+    e = t.add_parser("editar")
+    e.add_argument("id", type=int)
+    e.add_argument("--set", action="append", required=True, metavar="CAMPO=VALOR")
+    e.add_argument("--confirm", action="store_true")
+    s = t.add_parser("etapa")
+    s.add_argument("id", type=int)
+    s.add_argument("--etapa", required=True)
+    s.add_argument("--confirm", action="store_true")
+    st = t.add_parser("estado")
+    st.add_argument("id", type=int)
+    st.add_argument("--estado", required=True, choices=list(ESTADOS))
+    st.add_argument("--confirm", action="store_true")
     return p
 
 
@@ -342,7 +450,9 @@ def main():
     elif args.grupo == "proyecto":
         cmd_proyecto_info(args)
     elif args.grupo == "tarea":
-        {"get": cmd_tarea_get, "list": cmd_tarea_list}[args.accion](args)
+        {"get": cmd_tarea_get, "list": cmd_tarea_list, "crear": cmd_tarea_crear,
+         "editar": cmd_tarea_editar, "etapa": cmd_tarea_etapa,
+         "estado": cmd_tarea_estado}[args.accion](args)
 
 
 if __name__ == "__main__":
