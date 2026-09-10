@@ -51,43 +51,43 @@
 ### F0-T1 · Verificar Odoo arriba
 1. `docker ps` → contenedor Odoo en `Up`.
 2. `curl -s -o /dev/null -w "%{http_code}" http://<host>:8069/web/database/selector` → `200`.
-- [ ] 0.1 y 0.2 de ARQUITECTURA §7.1 en verde
+- [x] 0.1 y 0.2 de ARQUITECTURA §7.1 en verde — contenedores `qa_skill_odoo` y `qa_skill_db` Up · http 200 en 8069
 
 ### F0-T2 · Crear usuario técnico «IA Sync»
 1. Modo desarrollador → Ajustes → Usuarios → Nuevo.
 2. Nombre: `IA Sync` · usuario interno · login dedicado (ej. `ia.sync@miempresa.com`).
 3. Grupo: *Proyecto/Usuario* (sin Admin por ahora).
 4. Zona horaria = la tuya.
-- [ ] Usuario creado, interno, Proyecto/Usuario, tz correcta
+- [x] Usuario creado, interno, Proyecto/Usuario, tz correcta — `ia.sync` uid=8, grupos Internal User + Project/User, tz America/Guayaquil
 
 ### F0-T3 · Crear API key
 1. Iniciar sesión como IA Sync (o impersonar) → Preferencias → Seguridad → **Claves API** → nueva: `opencode`.
 2. Guardar la clave en un gestor de contraseñas (NO en un archivo suelto ni en el portapapeles permanente).
-- [ ] API key creada y guardada de forma segura
-- [ ] La clave NO está escrita en ningún archivo del disco todavía
+- [x] API key creada y guardada de forma segura — `opencode` generada vía wizard (verificación identidad), expiración 90 días (máx. permitida a IA Sync)
+- [x] La clave NO está escrita en ningún archivo del disco todavía — solo en el gestor de contraseñas del usuario
 
 ### F0-T4 · (Condicional) Timesheet
 1. Verificar si `hr_timesheet` está instalado (Aplicaciones, filtro Instalado).
 2. Si está: crear empleado `IA Sync` en RRHH vinculado al usuario.
 3. Si no: anotarlo — el sistema funcionará en modo `solo-registro`.
-- [ ] Situación del timesheet constatada y anotada aquí: ______
+- [x] Situación del timesheet constatada y anotada aquí: `hr_timesheet` instalado + empleado IA Sync creado (id=21) → **modo `timesheet`**
 
 ### F0-T5 · Crear proyecto QA-SKILL con etapas estándar
 Etapas (columnas del kanban), en este orden, con `fold` marcado en las finales:
 `Backlog · Especificaciones · En desarrollo · En pruebas · Revisión · Entregado (fold) · Cancelado (fold)`
-- [ ] Proyecto QA-SKILL creado con las 7 etapas y fold correcto
+- [x] Proyecto QA-SKILL creado con las 7 etapas y fold correcto — proyecto id=7 · etapas id 27–33
 
 ### F0-T6 · Tareas de mentira
 Crear 2–3 tareas en QA-SKILL (nombres cualesquiera; servirán para pruebas de lectura y escritura).
-- [ ] 2–3 tareas basura creadas
+- [x] 2–3 tareas basura creadas — Alpha (#57), Beta (#58), Gamma (#59)
 
 ### F0-T7 · Prueba de autenticación RPC (desechable)
 Ejecutar en `/tmp` (fuera del repo, se borra después) un snippet mínimo con `xmlrpc.client` que haga `common.version()` y `authenticate()` con la API key.
-- [ ] `version()` devuelve la versión del servidor
-- [ ] `authenticate()` devuelve un uid (no `False`)
-- [ ] Snippet borrado
+- [x] `version()` devuelve la versión del servidor — Odoo `18.0-20260619`
+- [x] `authenticate()` devuelve un uid (no `False`) — uid=8 con la API key `opencode`
+- [x] Snippet borrado — scripts desechables retirados del repo
 
-**Registro de Fase 0:** fecha: ____/____/____ · est. __h · real __h · notas: ______________
+**Registro de Fase 0:** fecha: 2026-09-09 · est. 2h · real 1h30 · notas: Odoo 18 creado vía docker compose en docker/qa; DB qa_skill; API key de 90 días (máx. para usuarios no-system); bootstrap reproducible con `docker/qa/setup.py`
 
 ---
 
@@ -102,7 +102,7 @@ Ejecutar en `/tmp` (fuera del repo, se borra después) un snippet mínimo con `x
 | G0.5 | QA-SKILL | Proyecto + etapas + tareas basura operativos |
 | G0.6 | RPC | Autenticación probada con uid válido |
 
-- [ ] **G0 COMPLETO EN VERDE → puede abrirse la FASE 1**
+- [x] **G0 COMPLETO EN VERDE → puede abrirse la FASE 1** — G0.1–G0.6 verificados (2026-09-09)
 
 ---
 
@@ -671,7 +671,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 
 | Fase | Gate | Fecha de cierre | Est. | Real | Estado |
 |---|---|---|---|---|---|
-| 0 Entorno | G0 | | | | ☐ |
+| 0 Entorno | G0 | 2026-09-09 | 2h | 1h30 | ✅ |
 | 1 Repo + docs | G1 | | | | ☐ |
 | 2 Esqueleto CLI | G2 | | | | ☐ |
 | 3 Conexión + doctor | G3 | | | | ☐ |
