@@ -643,6 +643,95 @@ class TestCalStats(unittest.TestCase):
         self.assertIn("Histórico corto", data["aviso"])
 
 
+class TestHorasList(unittest.TestCase):
+    """F11.x-T1: horas list (lectura) — helpers puros + parser."""
+
+    def test_ficha_linea_horas_normaliza(self):
+        mod = cargar_modulo()
+        ficha = mod.ficha_linea_horas(
+            {"id": 348, "name": "Redacción de la especificación",
+             "unit_amount": 0.5, "date": "2026-09-10",
+             "employee_id": [21, "IA Sync"]})
+        self.assertEqual(ficha["id"], 348)
+        self.assertEqual(ficha["horas"], 0.5)
+        self.assertEqual(ficha["empleado"], "IA Sync")
+        self.assertEqual(ficha["fecha"], "2026-09-10")
+
+    def test_ficha_linea_sin_empleado_ni_fecha(self):
+        mod = cargar_modulo()
+        ficha = mod.ficha_linea_horas(
+            {"id": 349, "name": "x", "unit_amount": 1.0,
+             "employee_id": False, "date": None})
+        self.assertEqual(ficha["empleado"], "—")
+        self.assertIsNone(ficha["fecha"])
+
+    def test_parser_acepta_horas_list(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(["horas", "list", "62"])
+        self.assertEqual(args.accion, "list")
+        self.assertEqual(args.id, 62)
+
+
+class TestHorasAjustar(unittest.TestCase):
+    """F11.x-T2: horas ajustar (escritura) — helpers puros + parser."""
+
+    def test_validar_horas_positivas_ok(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.validar_horas_positivas(1), 1)
+        self.assertEqual(mod.validar_horas_positivas(0.5), 0.5)
+
+    def test_validar_horas_cero_o_negativo_error(self):
+        mod = cargar_modulo()
+        for valor in (0, -1):
+            capturado = {}
+            original = mod.error
+
+            def fake_error(men, det="", **kw):
+                capturado["mensaje"] = men
+                raise SystemExit(1)
+            mod.error = fake_error
+            try:
+                with self.assertRaises(SystemExit):
+                    mod.validar_horas_positivas(valor)
+            finally:
+                mod.error = original
+            self.assertIn("positivo", capturado["mensaje"])
+
+    def test_validar_horas_nan_error(self):
+        mod = cargar_modulo()
+        capturado = {}
+        original = mod.error
+
+        def fake_error(men, det="", **kw):
+            capturado["mensaje"] = men
+            raise SystemExit(1)
+        mod.error = fake_error
+        try:
+            with self.assertRaises(SystemExit):
+                mod.validar_horas_positivas(float("nan"))
+        finally:
+            mod.error = original
+        self.assertIn("número", capturado["mensaje"])
+
+    def test_whitelist_ajuste(self):
+        mod = cargar_modulo()
+        self.assertIn("unit_amount", mod.HORAS_EDITABLES)
+        self.assertIn("name", mod.HORAS_EDITABLES)
+        self.assertNotIn("task_id", mod.HORAS_EDITABLES)
+        self.assertNotIn("project_id", mod.HORAS_EDITABLES)
+        self.assertNotIn("employee_id", mod.HORAS_EDITABLES)
+
+    def test_parser_acepta_horas_ajustar(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["horas", "ajustar", "348", "--horas", "1", "--nota", "ajuste"])
+        self.assertEqual(args.accion, "ajustar")
+        self.assertEqual(args.id, 348)
+        self.assertEqual(args.horas, 1)
+        self.assertEqual(args.nota, "ajuste")
+        self.assertFalse(args.confirm)
+
+
 class TestPlantillasCoherencia(unittest.TestCase):
     """F9-T2: coherencia plantillas ↔ parser ↔ SKILL.md."""
 
@@ -674,12 +763,13 @@ class TestPlantillasCoherencia(unittest.TestCase):
         self.assertIn("estimado_h:", plantilla)
         self.assertIn("interrupciones:si|no", plantilla)
 
-    def test_skilled_indice_cubre_los_15_comandos(self):
+    def test_skill_indice_cubre_los_17_comandos(self):
         skill = (self.RAIZ / "SKILL.md").read_text(encoding="utf-8")
         for comando in ("now", "doctor", "proyecto info", "tarea get",
                         "tarea list", "tarea crear", "tarea editar",
                         "tarea etapa", "tarea estado", "chatter post",
-                        "horas registrar", "ticket vincular",
+                        "horas registrar", "horas list", "horas ajustar",
+                        "ticket vincular",
                         "calibracion registrar", "calibracion stats", "raw"):
             self.assertIn(f"`{comando}", skill)
 

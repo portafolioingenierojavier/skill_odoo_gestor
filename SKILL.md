@@ -87,7 +87,7 @@ porque el ratio de desviación depende de quién estima.
 - No des por hecho un bloqueo del entorno: antes de afirmar que algo es
   imposible, ejecuta el comando en dry-run y muestra la salida real.
 
-## Comandos (índice — 15/15)
+## Comandos (índice — 17/17)
 | Comando | Tipo | Notas |
 |---|---|---|
 | `now` | local | reloj exacto |
@@ -101,7 +101,14 @@ porque el ratio de desviación depende de quién estima.
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
 | `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
 | `horas registrar ID --horas X --nota "..."` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo |
+| `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) |
+| `horas ajustar ID --horas X [--nota]` | escritura | dry-run → `--confirm`; whitelist `name`/`unit_amount` |
 | `ticket vincular ID --ticket N` | escritura | dry-run → `--confirm` |
 | `calibracion registrar --modelo M ...` | local | entrada de tiempo por tarea |
 | `calibracion stats --modelo M` | local | ratios global y por tipo |
 | `raw --modelo M --domain JSON` | **solo lectura** | método prohibido → exit 1 |
+
+> **Ajuste de horas:** si te piden modificar horas de una tarea, ejecuta primero
+> `horas list ID`. Si tiene **más de un parte de horas**, muestra las líneas y
+> pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
+> propón el ajuste de esa línea con dry-run y espera el OK.

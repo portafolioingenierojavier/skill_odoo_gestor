@@ -242,7 +242,9 @@ sequenceDiagram
 | `tarea get ID` · `tarea list` | lectura | — | `0 · 1` |
 | `tarea crear · editar · etapa · estado` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
 | `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
-| `horas registrar ID --horas X` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
+| `horas registrar ID --horas X --nota "..."` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
+| `horas list ID` | lectura | líneas de timesheet de la tarea | `0 · 1` |
+| `horas ajustar ID --horas X [--nota]` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
 | `ticket vincular ID --ticket N` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
 | `calibracion stats · registrar` | local | — | `0 · 1` |
 | `raw --modelo M --domain '[...]'` | **solo lectura** | — | `0 · 1` |

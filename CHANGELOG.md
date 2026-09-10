@@ -2,6 +2,28 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc3] — 2026-09-10
+
+### Añadido
+- **Ajuste pre-estreno (petición del usuario)**: el CLI podía crear partes de
+  horas (`horas registrar`) pero no modificarlos. Para responder a «ajusta las
+  horas de la tarea X a 1 hora» se añaden por TDD:
+  - `horas list ID` (lectura): busca `account.analytic.line` por `task_id`
+    (orden `date desc`, límite 200) y devuelve `tarea`, `total`, `total_horas`
+    y `lineas` (id, nota, horas, fecha, empleado).
+  - `horas ajustar ID --horas X [--nota]` (escritura): write acotado a la
+    whitelist `HORAS_EDITABLES = ("name", "unit_amount")`; exige
+    `modo_horas == timesheet`; valida horas positivas finitas; dry-run (exit 2)
+    con propuesta `antes`/`despues`, luego `--confirm`; registra en
+    `actividad.log`.
+  - Contrato de comportamiento (SKILL.md): si la tarea tiene más de un parte de
+    horas, la IA muestra `horas list` y pregunta al usuario cuál ajustar —
+    nunca elige por su cuenta.
+- Verificado: N1 **58/58** en verde; N2 2.19 (`horas list 62` → línea 348,
+  0.05 h), 2.20 (dry-run exit 2 sin cambio) y 2.21 (confirm → 0.5 h + log) en
+  verde contra QA. Documentación en 17/17 comandos (SKILL.md, ARQUITECTURA,
+  README, ROADMAP cobertura C) y `tests/INTEGRACION.md` con los casos nuevos.
+
 ## [1.0.0-rc2] — 2026-09-10
 
 ### Añadido

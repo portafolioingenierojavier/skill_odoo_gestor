@@ -191,7 +191,7 @@ porque el ratio de desviación depende de quién estima.
 - No des por hecho un bloqueo del entorno: antes de afirmar que algo es
   imposible, ejecuta el comando en dry-run y muestra la salida real.
 
-## Comandos (índice — 15/15)
+## Comandos (índice — 17/17)
 | Comando | Tipo | Notas |
 |---|---|---|
 | `now` | local | reloj exacto |
@@ -205,10 +205,17 @@ porque el ratio de desviación depende de quién estima.
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
 | `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
 | `horas registrar ID --horas X --nota "..."` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo |
+| `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) |
+| `horas ajustar ID --horas X [--nota]` | escritura | dry-run → `--confirm`; whitelist `name`/`unit_amount` |
 | `ticket vincular ID --ticket N` | escritura | dry-run → `--confirm` |
 | `calibracion registrar --modelo M ...` | local | entrada de tiempo por tarea |
 | `calibracion stats --modelo M` | local | ratios global y por tipo |
 | `raw --modelo M --domain JSON` | **solo lectura** | método prohibido → exit 1 |
+
+> **Ajuste de horas:** si te piden modificar horas de una tarea, ejecuta primero
+> `horas list ID`. Si tiene **más de un parte de horas**, muestra las líneas y
+> pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
+> propón el ajuste de esa línea con dry-run y espera el OK.
 ```
 
 ### 4.2 `odoo_sync.py` (global)
@@ -952,6 +959,8 @@ Instancias generadas desde plantillas. La calibración es **un archivo por model
 | `tarea crear` · `editar` · `etapa` · `estado` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
 | `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
 | `horas registrar ID --horas X --nota "..."` | **escritura** | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo | 2, 0, 1 |
+| `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) | 0, 1 |
+| `horas ajustar ID --horas X [--nota]` | **escritura** | dry-run → `--confirm`; whitelist `name`/`unit_amount` | 2, 0, 1 |
 | `ticket vincular ID --ticket N` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
 | `calibracion stats / registrar` | local | — | 0, 1 |
 | `raw --modelo M --domain '[...]'` | **solo lectura** | — | 0, 1 |
@@ -1141,6 +1150,9 @@ if __name__ == "__main__":
 | 2.16 | `raw --modelo project.task --domain '[["project_id","=",<QA>]]'` | exit 0, registros | Datos correctos |
 | 2.17 | `raw --metodo create ...` | **exit 1** «solo lectura» | Ninguna escritura ocurrida |
 | 2.18 | `calibracion registrar` + `stats` | exit 0 | `tareas:1`, ratio correcto |
+| 2.19 | `horas list <id>` | exit 0; `lineas` con id/horas/nota/fecha/empleado | Coincide con la hoja de horas de la tarea |
+| 2.20 | `horas ajustar <línea> --horas X` sin confirm | exit 2, propuesta con `antes`/`despues` | La línea NO cambió |
+| 2.21 | ídem con `--confirm` | exit 0; línea en `actividad.log` | `horas list` refleja el nuevo valor |
 
 ### 7.4 Nivel 3 — Comportamiento de la IA (la IA también es una herramienta a validar)
 

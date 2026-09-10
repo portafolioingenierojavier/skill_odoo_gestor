@@ -15,6 +15,7 @@ Dependencias : únicamente la librería estándar de Python.
 import argparse
 import datetime as dt
 import json
+import math
 import os
 import re
 import sys
@@ -41,6 +42,8 @@ ESTADOS = {  # alias amigable → valor real del campo state (QA, Odoo 18-202606
 }
 
 EDITABLES = ("name", "description", "date_deadline", "planned_hours")
+
+HORAS_EDITABLES = ("name", "unit_amount")
 
 LECTURA_CRUDA = ("search_read", "read", "fields_get", "search_count")
 
@@ -497,6 +500,60 @@ def cmd_horas(args):
     ok({"tarea": args.id, "horas": args.horas})
 
 
+def validar_horas_positivas(h):
+    if (not isinstance(h, (int, float)) or not math.isfinite(h) or h <= 0):
+        error("Las horas deben ser un número positivo (ej. 1 o 0.5)")
+    return h
+
+
+def ficha_linea_horas(l):
+    empleado = l.get("employee_id") or [None, "—"]
+    return {"id": l["id"], "nota": l.get("name"),
+            "horas": l.get("unit_amount"), "fecha": l.get("date"),
+            "empleado": empleado[1]}
+
+
+def cmd_horas_list(args):
+    odoo, cfg = conexion_y_config()
+    lineas = odoo.buscar("account.analytic.line",
+                         [["task_id", "=", args.id]],
+                         ["id", "name", "unit_amount", "date", "employee_id"],
+                         limite=200, orden="date desc")
+    fichas = [ficha_linea_horas(l) for l in lineas]
+    ok({"tarea": args.id, "total": len(fichas),
+        "total_horas": round(sum((l["horas"] or 0) for l in fichas), 2),
+        "lineas": fichas})
+
+
+def cmd_horas_ajustar(args):
+    odoo, cfg = conexion_y_config()
+    if cfg.get("modo_horas") != "timesheet":
+        error("hr_timesheet no instalado (modo «solo-registro»): registra las "
+              "horas en el resumen del chatter y en la calibración")
+    validar_horas_positivas(args.horas)
+    actual = odoo.ejec("account.analytic.line", "read", [args.id],
+                       fields=["id", "name", "unit_amount",
+                               "task_id", "employee_id", "date"])
+    if not actual:
+        error(f"No existe la línea de horas {args.id}")
+    vals = {"unit_amount": args.horas}
+    if args.nota is not None:
+        vals["name"] = args.nota
+    ilegal = [c for c in vals if c not in HORAS_EDITABLES]
+    if ilegal:
+        error("Campo no permitido en ajuste de horas: " + ", ".join(ilegal))
+    propuesta = {"accion": "ajustar horas (timesheet)",
+                 "linea": f"#{args.id}",
+                 "antes": ficha_linea_horas(actual[0]),
+                 "despues": {"nota": vals.get("name", actual[0].get("name")),
+                             "horas": args.horas}}
+    if not args.confirm:
+        dry_run(propuesta)
+    odoo.ejec("account.analytic.line", "write", [args.id], vals)
+    registrar_actividad("horas ajustar", f"#{args.id} {args.horas}h")
+    ok({"linea": args.id, "horas": args.horas})
+
+
 def cmd_ticket(args):
     odoo, cfg = conexion_y_config()
     disponibles = cfg.get("campos", {}).get("tickets") or []
@@ -611,11 +668,19 @@ def construir_parser():
     ch.add_argument("--confirm", action="store_true")
 
     hor = sub.add_parser("horas")
-    hr = hor.add_subparsers(dest="accion", required=True).add_parser("registrar")
+    hs = hor.add_subparsers(dest="accion", required=True)
+    hr = hs.add_parser("registrar")
     hr.add_argument("id", type=int)
     hr.add_argument("--horas", type=float, required=True)
     hr.add_argument("--nota")
     hr.add_argument("--confirm", action="store_true")
+    hl = hs.add_parser("list", help="Líneas de timesheet de una tarea (lectura)")
+    hl.add_argument("id", type=int)
+    ha = hs.add_parser("ajustar", help="Ajusta horas de una línea existente")
+    ha.add_argument("id", type=int)
+    ha.add_argument("--horas", type=float, required=True)
+    ha.add_argument("--nota")
+    ha.add_argument("--confirm", action="store_true")
 
     tic = sub.add_parser("ticket")
     tv = tic.add_subparsers(dest="accion", required=True).add_parser("vincular")
@@ -666,7 +731,8 @@ def main():
     elif args.grupo == "chatter":
         cmd_chatter_post(args)
     elif args.grupo == "horas":
-        cmd_horas(args)
+        {"registrar": cmd_horas, "list": cmd_horas_list,
+         "ajustar": cmd_horas_ajustar}[args.accion](args)
     elif args.grupo == "ticket":
         cmd_ticket(args)
     elif args.grupo == "calibracion":

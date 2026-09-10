@@ -52,10 +52,18 @@ Ejecutar: `python -m unittest tests/test_odoo_sync.py -v`
 | 2.16 | `raw --modelo project.task` | exit 0, registros | Datos correctos | ✅ 10 registros correctos |
 | 2.17 | `raw --metodo create ...` | exit 1 «solo lectura» | Ninguna escritura ocurrió | ✅ total 38 (sin alta) |
 | 2.18 | `calibracion registrar` + `stats` | exit 0 | `tareas:1`, ratio correcto | ✅ tareas 1, ratio 1.0 |
+| 2.19 | `horas list 62` | exit 0; `lineas` con id/horas/nota/fecha/empleado | Coincide con la hoja de horas | ✅ línea 348, 0.05 h, emp IA Sync |
+| 2.20 | `horas ajustar 348 --horas 0.5` sin confirm | exit 2, propuesta `antes`/`despues` | La línea NO cambió | ✅ exit 2 |
+| 2.21 | ídem con `--confirm` | exit 0; línea en `actividad.log` | `horas list 62` refleja 0.5 | ✅ 0.5 h + log `horas ajustar` |
 
 **Resultado F10:** 18/18 en verde — ejecutado con `.ia/` recreado desde cero
 (config, calibración y log borrados; `.env` conservado) y config regenerado
 con `doctor --proyecto 7`.
+
+**Ajuste pre-estreno (2026-09-10):** 2.19–2.21 añadidos por la petición del
+usuario («ajusta las horas de la tarea X a 1 hora»). El CLI ahora tiene
+`horas list` (lectura) y `horas ajustar` (escritura, whitelist
+`name`/`unit_amount`, dry-run → `--confirm`). N1 58/58 y 2.19–2.21 en verde.
 
 ## Nivel 3 — Comportamiento de la IA (Fase 11)
 

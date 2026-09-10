@@ -560,6 +560,15 @@ AMBER.
 
 - [x] **G11 COMPLETO EN VERDE → FASE 12 (estreno real) abierta como única etapa pendiente de desarrollo**
 
+### 🔧 Ajuste pre-estreno (2026-09-10, post-G11)
+Petición del usuario: «ajusta las horas de la tarea X a 1 hora». El CLI solo podía
+**crear** líneas (`horas registrar`), no modificarlas. Se añade por TDD:
+- `horas list ID` (lectura): líneas de timesheet de la tarea.
+- `horas ajustar ID --horas X [--nota]` (escritura): whitelist `name`/`unit_amount`,
+  dry-run → `--confirm`. La IA nunca elige la línea: si hay >1 parte, muestra
+  `horas list` y pregunta al usuario (contrato en SKILL.md).
+- Verificado: N1 58/58 · N2 (2.19 `horas list` · 2.20/2.21 `horas ajustar`) · CHANGELOG 1.0.0-rc3.
+
 ---
 
 ## FASE 12 — Estreno en el proyecto real (DoD global)
@@ -671,7 +680,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 | 1.11 credenciales intocables | F0-T3, F3-T4 · G3, G8 (auditoría 5/5) |
 | 1.12 bug → test primero | Regla transversal §0 + F11-T3 |
 
-**C. Comandos del CLI (15/15):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5) · chatter post (F6) · horas registrar (F6) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 15/15 en G9.
+**C. Comandos del CLI (17/17):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5) · chatter post (F6) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 17/17 en G9 + ajuste pre-estreno.
 
 **D. Protocolos de SKILL.md:** arranque (F11-T2 3.1) · guard (3.3) · dos fases (3.4) · anti-invención (3.5) · hora (3.2) · estimación con ratio (3.7) · desviación (3.8) · cierre completo (3.9) · manejo de fallos (3.10).
 
