@@ -2,6 +2,18 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc1] — 2026-09-10
+
+### Cambiado
+- **Fase 10 completa — DoD Nivel 2** (G10 en verde): la skill es técnicamente
+  confiable.
+- `instalar.sh` para instalar la skill global vía symlink (en Windows se crea
+  un junction, equivalente transparente) con verificación del target.
+- Batería completa en verde con entorno recreado **desde cero**: N0 6/6 ·
+  N1 50/50 (0 skips) · N2 2.1–2.18 (18/18) contra QA-SKILL.
+- `tests/INTEGRACION.md` creado con las 3 tablas de validación y resultados de
+  la regresión F10.
+
 ## [0.7.0] — 2026-09-10
 
 ### Añadido
