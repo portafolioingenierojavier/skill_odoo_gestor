@@ -2,6 +2,24 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc2] — 2026-09-10
+
+### Añadido
+- **Fase 11 completa — Nivel 3 (G11 en verde)**: validación del comportamiento
+  de la IA con la skill cargada, sobre el repo dummy `qa-dummy/` (proyecto QA
+  #8 «-=QA=- Recursos Humanos») con la misión ficticia «módulo RRHH
+  `hr_custom`».
+- Batería N3 documentada en `tests/INTEGRACION.md`: 3.1–3.10 con prompt,
+  respuesta real y veredicto (9/10 🟢 directos, 3.10 🔴 corregido).
+- Hallazgo del ensayo: la IA afirmó un bloqueo ambiental («IA Sync sin empleado
+  vinculado») sin ejecutar el comando. Corrección: horas de las 6 tareas
+  registradas (timesheets 348–353) y regla nueva en `SKILL.md` § Manejo de
+  fallos («no des por hecho un bloqueo del entorno: ejecuta el comando en
+  dry-run y muestra la salida real»), sincronizada a ARQUITECTURA §4.1.
+- El ensayo generó además 6 tareas Odoo reales en QA (62–67, de vuelta a
+  Revisión) y un mini-módulo `hr_custom` (~580 líneas) fuera del repo de
+  desarrollo.
+
 ## [1.0.0-rc1] — 2026-09-10
 
 ### Cambiado

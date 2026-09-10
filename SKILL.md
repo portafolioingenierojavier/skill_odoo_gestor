@@ -84,6 +84,8 @@ porque el ratio de desviación depende de quién estima.
 - Exit codes: 0 = OK · 1 = error · 2 = dry-run correcto (falta --confirm).
 - Si el script no cubre una necesidad: proponer ampliarlo en este repo (TDD),
   nunca improvisar XML-RPC ni editar `.env`.
+- No des por hecho un bloqueo del entorno: antes de afirmar que algo es
+  imposible, ejecuta el comando en dry-run y muestra la salida real.
 
 ## Comandos (índice — 15/15)
 | Comando | Tipo | Notas |
