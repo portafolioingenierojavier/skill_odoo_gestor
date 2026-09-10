@@ -695,6 +695,14 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 
 ---
 
+## §17. Pendientes externos (del usuario)
+
+| # | Tarea | Quién | Estado |
+|---|---|---|---|
+| 1 | Galería del README: grabar las capturas de terminal (`docs/screenshots/*.gif`) y completar la sección 📸 Galería | Usuario | ⏳ pendiente — no bloquea fases |
+
+---
+
 **Fin del documento.** La cuadríología queda completa: ARQUITECTURA (qué) · PAUTAS (cómo) · ROADMAP (cuándo y con qué pruebas) · la skill misma (el producto). Cada documento protege a los otros: nada se construye fuera de arquitectura, nada se integra sin pautas, nada se declara terminado sin gate.
 
 ---

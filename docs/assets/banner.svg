@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="230" viewBox="0 0 880 230" role="img" aria-label="odoo-gestor — skill de gestión de proyectos Odoo para IAs de desarrollo">
+  <defs>
+    <!-- Gradiente de odoo-gestor: purple → cyan → pink -->
+    <linearGradient id="lj" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0"   stop-color="#7B2FBE"/>
+      <stop offset="0.5" stop-color="#4CC9F0"/>
+      <stop offset="1"   stop-color="#EC4899"/>
+    </linearGradient>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#21262D" stroke-width="1"/>
+    </pattern>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="880" height="230" fill="#0D1117"/>
+  <rect width="880" height="230" fill="url(#grid)" opacity="0.5"/>
+  <circle cx="780" cy="40" r="190" fill="url(#lj)" opacity="0.14"/>
+  <circle cx="80"  cy="215" r="150" fill="url(#lj)" opacity="0.10"/>
+
+  <text x="56" y="118" font-family="Fira Code, Cascadia Code, Consolas, monospace"
+        font-size="58" font-weight="700" letter-spacing="2"
+        fill="url(#lj)" filter="url(#glow)">odoo-gestor</text>
+
+  <text x="58" y="156" font-family="Fira Code, Consolas, monospace" font-size="15" fill="#8B949E">
+    <tspan fill="#4CC9F0">❯</tspan> la IA decide y redacta · el script ejecuta y valida</text>
+
+  <g font-family="Fira Code, Consolas, monospace" font-size="12">
+    <rect x="58"  y="176" rx="12" width="135" height="24" fill="#161B22" stroke="#4CC9F0"/>
+    <text x="125" y="192" text-anchor="middle" fill="#4CC9F0">Open Code ⇄ Odoo</text>
+    <rect x="201" y="176" rx="12" width="120" height="24" fill="#161B22" stroke="#22C55E"/>
+    <text x="261" y="192" text-anchor="middle" fill="#22C55E">0 dependencias</text>
+    <rect x="329" y="176" rx="12" width="150" height="24" fill="#161B22" stroke="#EC4899"/>
+    <text x="404" y="192" text-anchor="middle" fill="#EC4899">escrituras 2 fases</text>
+  </g>
+
+  <rect y="224" width="880" height="6" fill="url(#lj)"/>
+</svg>
