@@ -408,30 +408,31 @@ Casos: entrada completa ✅ · entrada mínima (solo obligatorios) ✅ · 3 nega
 ## FASE 8 — `raw` + auditoría de seguridad
 
 ### F8-T1 · `raw` (solo lectura)
-🧪 Ejecutar N2: 2.16 (search_read correcto) · 2.17 (`--metodo create` → exit 1, **cero escritura**) · dominio JSON inválido → error · `fields_get` devuelve solo nombres de campos.
-- [ ] 2.16, 2.17 y bordes en verde
+🧪 N2: 2.16 (search_read correcto, 3 tareas) ✅ · 2.17 (`--metodo create` → exit 1, **cero escritura**: total 37 → 37) ✅ · dominio JSON inválido → error limpio exit 1 ✅ · `fields_get` devuelve solo nombres (116 campos) ✅.
+> Parser `raw` sin `choices` (si no, `create` moriría en argparse con exit 2 y no probaría la validación de cmd_raw); `--ids` requerido para read.
+- [x] 2.16, 2.17 y bordes en verde
 
 ### F8-T2 · Auditoría de seguridad completa (revisión manual)
-1. `grep -rn "ODOO_API_KEY\|apikey\|api_key" --include="*.py"` → ninguna impresión del valor.
-2. Revisar `actividad.log` completo: sin secretos.
-3. `git log -p` completo: sin secretos en la historia.
-4. `git status`: limpio; `.env` invisible.
-5. Revisión de código: `raw` sin escritura · whitelists intactas · `xmlrpc` solo en clase `Odoo`.
-- [ ] 5/5 verificaciones en verde
+1. `*.py`: solo nombres de constantes y `clave-dummy`; el valor real NO aparece ✅
+2. `actividad.log` completo: sin secretos ✅
+3. `git log -p --all`: 0 coincidencias del valor real ✅
+4. `git ls-files`: 0 archivos `.env` versionados; `.ia/.env` excluido por `.gitignore:2` ✅
+5. Código: `raw` restringido a `LECTURA_CRUDA` · whitelists intactas · `xmlrpc` solo en clase `Odoo` ✅
+- [x] 5/5 verificaciones en verde
 
-**Registro de Fase 8:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 8:** fecha 2026-09-10 · est. 0h45 · real 0h40 · notas: `raw` sin choices para que `create` pruebe la validación de cmd_raw (exit 1); dominio/ids con errores JSON limpios; auditoría 5/5 + perímetro de escritura firmado.
 
 ---
 
 ## 🚧 GATE G8 — Seguridad (gate de bloqueo duro)
 
-- [ ] N2: 2.16, 2.17 en verde
-- [ ] N1 acumulada en verde
-- [ ] Auditoría de seguridad 5/5 en verde **(ítem de bloqueo: si falla uno, no se continúa aunque todo lo demás esté verde)**
-- [ ] Perímetro de escritura cerrado: escribir en Odoo solo es posible vía comandos con confirm (revisión de código firmada)
-- [ ] CHANGELOG actualizado
+- [x] N2: 2.16, 2.17 en verde
+- [x] N1 acumulada en verde (46/46)
+- [x] Auditoría de seguridad 5/5 en verde **(ítem de bloqueo superado)**
+- [x] Perímetro de escritura cerrado: escribir en Odoo solo es posible vía comandos con confirm (revisión de código firmada — todo create/write detrás de `if not args.confirm: dry_run`)
+- [x] CHANGELOG actualizado
 
-- [ ] **G8 COMPLETO EN VERDE → puede abrirse la FASE 9**
+- [x] **G8 COMPLETO EN VERDE → puede abrirse la FASE 9**
 
 ---
 

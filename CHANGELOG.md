@@ -2,6 +2,17 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [0.6.0] — 2026-09-10
+
+### Añadido
+- **Fase 8 — `raw` + auditoría de seguridad** (G8 en verde, gate de bloqueo).
+- `raw` (SÓLO lectura): `search_read` por defecto + `read`/`fields_get`/
+  `search_count`; `--metodo create` → exit 1 sin contacto de escritura
+  (N2 2.16/2.17 ✅); dominio JSON inválido e `--ids` no numérico → error limpio.
+- Auditoría 5/5: sin secretos en `*.py`, en `actividad.log` ni en
+  `git log -p`; 0 `.env` versionados; `raw` sin escritura y `xmlrpc` solo en
+  la clase `Odoo`.
+
 ## [0.5.0] — 2026-09-10
 
 ### Añadido

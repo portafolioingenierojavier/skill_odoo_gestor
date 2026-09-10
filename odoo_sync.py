@@ -539,6 +539,34 @@ def cmd_ticket(args):
     ok({"tarea": args.id, "ticket": args.ticket, "campo": campo})
 
 
+def cmd_raw(args):
+    if args.metodo not in LECTURA_CRUDA:
+        error(f"raw solo permite lectura: {', '.join(LECTURA_CRUDA)}")
+    odoo, _ = conexion_y_config()
+    try:
+        dominio = json.loads(args.domain) if args.domain else []
+    except ValueError:
+        error(f"El dominio debe ser una lista JSON: {args.domain}")
+    if not isinstance(dominio, list):
+        error("El dominio debe ser una lista JSON")
+    campos = args.campos.split(",") if args.campos else []
+    if args.metodo == "read":
+        if not args.ids:
+            error("--metodo read requiere --ids (separados por comas)")
+        try:
+            ids = [int(x) for x in args.ids.split(",")]
+        except ValueError:
+            error(f"--ids debe ser numérico, separado por comas: {args.ids}")
+        ok({"registros": odoo.ejec(args.modelo, "read", ids, fields=campos)})
+    if args.metodo == "search_count":
+        ok({"total": odoo.ejec(args.modelo, "search_count", dominio)})
+    if args.metodo == "fields_get":
+        ok({"campos": sorted(odoo.ejec(args.modelo, "fields_get", [],
+                                       attributes=["string"]))})
+    ok({"registros": odoo.ejec(args.modelo, "search_read", dominio,
+                               fields=campos, limit=args.limite)})
+
+
 # ------------------------------------------------------------------ entrada
 
 def construir_parser():
@@ -620,6 +648,15 @@ def construir_parser():
     kr.add_argument("--lineas", type=int)
     kr.add_argument("--interrupciones", action="store_true")
     kr.add_argument("--notas", help="texto o @archivo.md")
+
+    raw = sub.add_parser("raw", help="Consulta libre — SOLO lectura")
+    raw.add_argument("--modelo", required=True)
+    raw.add_argument("--metodo", default="search_read")
+    raw.add_argument("--campos", help="lista separada por comas")
+    raw.add_argument("--domain", default="[]",
+                     help='dominio JSON, ej. [["id",">",10]]')
+    raw.add_argument("--ids", help="para read: ids separados por comas")
+    raw.add_argument("--limite", type=int, default=50)
     return p
 
 
@@ -643,6 +680,8 @@ def main():
         cmd_ticket(args)
     elif args.grupo == "calibracion":
         {"stats": cmd_cal_stats, "registrar": cmd_cal_registrar}[args.accion](args)
+    elif args.grupo == "raw":
+        cmd_raw(args)
 
 
 if __name__ == "__main__":

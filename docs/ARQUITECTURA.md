@@ -672,12 +672,20 @@ def cmd_raw(args):
     if args.metodo not in LECTURA_CRUDA:
         error(f"raw solo permite lectura: {', '.join(LECTURA_CRUDA)}")
     odoo, _ = conexion_y_config()
-    dominio = json.loads(args.domain) if args.domain else []
+    try:
+        dominio = json.loads(args.domain) if args.domain else []
+    except ValueError:
+        error(f"El dominio debe ser una lista JSON: {args.domain}")
     if not isinstance(dominio, list):
         error("El dominio debe ser una lista JSON")
     campos = args.campos.split(",") if args.campos else []
     if args.metodo == "read":
-        ids = [int(x) for x in args.ids.split(",")]
+        if not args.ids:
+            error("--metodo read requiere --ids (separados por comas)")
+        try:
+            ids = [int(x) for x in args.ids.split(",")]
+        except ValueError:
+            error(f"--ids debe ser numérico, separado por comas: {args.ids}")
         ok({"registros": odoo.ejec(args.modelo, "read", ids, fields=campos)})
     if args.metodo == "search_count":
         ok({"total": odoo.ejec(args.modelo, "search_count", dominio)})
@@ -755,7 +763,7 @@ def construir_parser():
 
     raw = sub.add_parser("raw", help="Consulta libre — SOLO lectura")
     raw.add_argument("--modelo", required=True)
-    raw.add_argument("--metodo", default="search_read", choices=list(LECTURA_CRUDA))
+    raw.add_argument("--metodo", default="search_read")
     raw.add_argument("--campos", help="lista separada por comas")
     raw.add_argument("--domain", default="[]", help='dominio JSON, ej. [["id",">",10]]')
     raw.add_argument("--ids", help="para read: ids separados por comas")
