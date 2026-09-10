@@ -200,41 +200,41 @@ Formato exacto: `fecha | comando | detalle | APLICADO`, append, UTF-8 con acento
 ### F3-T1 · Clase `Odoo`
 1. Implementar `__init__` (conexión, `version()`, `authenticate`), `ejec` (manejo centralizado de `Fault` → error JSON truncado), `buscar`.
 2. 🧪 Ejecutar N2: caso 2.3 (API key inválida → exit 1 «Autenticación fallida», sin traceback).
-- [ ] Conexión y manejo de errores verificados contra QA
+- [x] Conexión y manejo de errores verificados contra QA — N2 2.3 ✅ (corrección: `ejec` extrae el dict de params final posicional para respetar semántica XML-RPC)
 
 ### F3-T2 · Comando `now` — 🧪 test ANTES
 1. Test N1: formato ISO, presencia de `zona_horaria` y `epoch` (caso 1.1).
 2. Implementar comando + subparser.
-- [ ] Test creado y pasando
+- [x] Test creado y pasando — N2 2.1 ✅ (hora coincide con reloj local)
 
 ### F3-T3 · Comando `doctor` (con `--proyecto`)
 1. Implementar: detección de campos (`asignacion`, `planned_hours`, `state`, `tickets`), módulo `hr_timesheet`, usuario, proyectos, etapas, y **escritura de `.ia/config.json`**.
 2. 🧪 Ejecutar N2: caso 2.2 (exit 0, JSON completo, `config_escrito`).
 3. 🧪 Crear test N1 de la estructura del config generado (claves obligatorias presentes, `etapas` mapeadas, `umbral_desviacion_pct=25`).
-- [ ] 2.2 en verde · config estructuralmente válido
+- [x] 2.2 en verde · config estructuralmente válido — `construir_config()` extraído como función pura testable
 
 ### F3-T4 · Puesta a punto del repo de desarrollo
 1. Crear `.ia/.env` con las credenciales REALES de QA (gitignored).
 2. `doctor --proyecto <QA-SKILL>` desde la raíz del repo.
 3. **Revisar a mano** el `config.json` generado: etapas correctas, campo de tickets detectado (o vacío — anotar el nombre real si existe en su instancia), `modo_horas` coherente con F0-T4.
-- [ ] `.env` creado (no versionado — verificar `git status`)
-- [ ] `config.json` revisado y corregido a mano si hace falta
-- [ ] Campo de tickets: detectado = ______ / o vacío (pendiente indicar a mano)
+- [x] `.env` creado (no versionado — verificar `git status`)
+- [x] `config.json` revisado y corregido a mano si hace falta — correcto, sin correcciones
+- [x] Campo de tickets: detectado = vacío `[]` (esta instancia no expone ningún campo con "ticket"; no hay helpdesk instalado). Nota: `planned_hours` NO existe en esta instancia (solo `progress`) — F5 deberá acomodarse.
 
-**Registro de Fase 3:** fecha ____ · est. __h · real __h · notas: ______
+**Registro de Fase 3:** fecha: 2026-09-09 · est. 3h · real 1h30 · notas: detectado `planned_hours=false` (campo ausente en project.task de esta instancia); tickets vacío; `modo_horas=timesheet` coherente con F0-T4; N2 2.1/2.2/2.3 ✅
 
 ---
 
 ## 🚧 GATE G3 — Conexión y diagnóstico
 
-- [ ] N2: 2.1, 2.2, 2.3 en verde
-- [ ] N1 completa en verde (acumulada, incluye tests de F2)
-- [ ] `config.json` de QA generado, revisado humano y bajo control del repo (versionado)
-- [ ] grep de seguridad: ninguna credencial impresa en salidas ni logs
-- [ ] `doctor` es el ÚNICO que escribe config (revisión de código)
-- [ ] CHANGELOG actualizado (nuevos comandos: now, doctor)
+- [x] N2: 2.1, 2.2, 2.3 en verde
+- [x] N1 completa en verde (acumulada, incluye tests de F2) — 16/16
+- [x] `config.json` de QA generado, revisado humano y bajo control del repo (versionado) — commit en F3
+- [x] grep de seguridad: ninguna credencial impresa en salidas ni logs (solo credenciales dummy locales de docker/qa)
+- [x] `doctor` es el ÚNICO que escribe config (revisión de código) — `cmd_doctor` único writer
+- [x] CHANGELOG actualizado (nuevos comandos: now, doctor) — 0.1.0
 
-- [ ] **G3 COMPLETO EN VERDE → puede abrirse la FASE 4**
+- [x] **G3 COMPLETO EN VERDE → puede abrirse la FASE 4** — (2026-09-09)
 
 ---
 
@@ -674,6 +674,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 | 0 Entorno | G0 | 2026-09-09 | 2h | 1h30 | ✅ |
 | 1 Repo + docs | G1 | 2026-09-09 | 1h | 30m | ✅ |
 | 2 Esqueleto CLI | G2 | 2026-09-09 | 2h | 1h | ✅ |
+| 3 Conexión Odoo | G3 | 2026-09-09 | 3h | 1h30 | ✅ |
 | 2 Esqueleto CLI | G2 | | | | ☐ |
 | 3 Conexión + doctor | G3 | | | | ☐ |
 | 4 Lecturas | G4 | | | | ☐ |
