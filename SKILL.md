@@ -53,7 +53,7 @@ Excepciones: `tarea estado --estado espera` para bloqueos (con motivo en chatter
 
 **Roles de etapa:** `doctor` guarda en `.ia/config.json` → `roles` los nombres reales
 que cumplen cada rol por **orden de kanban**: primera etapa de trabajo = `inicio`,
-última = `fin` (la columna de cancelado/anulado se salta), y por nombre las de
+última = `fin` (las columnas de cancelado/anulado/rechazado se saltan), y por nombre las de
 `espera`/`cancelado`. Usa estos roles cuando el proyecto no siga los nombres
 estándar: la «etapa final» real la verás en `proyecto info` → `roles.fin`, no la
 asumas por el nombre.

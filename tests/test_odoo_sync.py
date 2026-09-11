@@ -404,6 +404,27 @@ class TestAsignarRoles(unittest.TestCase):
         self.assertEqual(roles["inicio"], "Nuevo")
         self.assertEqual(roles["fin"], "Hecho")
 
+    def test_sequence_cero_es_la_primera(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 140, "name": "Nuevo", "sequence": 0},
+                  {"id": 141, "name": "En desarrollo", "sequence": 1},
+                  {"id": 142, "name": "Hecho", "sequence": 3}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "Nuevo")
+        self.assertEqual(roles["fin"], "Hecho")
+
+    def test_rechazado_se_trata_como_cancelado(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 140, "name": "Nuevo", "sequence": 0},
+                  {"id": 141, "name": "En desarrollo", "sequence": 1},
+                  {"id": 144, "name": "Revisión", "sequence": 2},
+                  {"id": 142, "name": "Hecho", "sequence": 3},
+                  {"id": 143, "name": "Rechazado", "sequence": 4}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "Nuevo")
+        self.assertEqual(roles["fin"], "Hecho")
+        self.assertEqual(roles["cancelado"], "Rechazado")
+
     def test_config_incluye_roles(self):
         mod = cargar_modulo()
         etapas = [{"id": 27, "name": "Backlog", "sequence": 1},

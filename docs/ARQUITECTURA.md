@@ -157,7 +157,7 @@ Excepciones: `tarea estado --estado espera` para bloqueos (con motivo en chatter
 
 **Roles de etapa:** `doctor` guarda en `.ia/config.json` → `roles` los nombres
 reales por **orden de kanban** (`sequence`, fallback `id`): primera etapa de
-trabajo = `inicio`, última = `fin` (salta la columna de cancelado/anulado); las de
+trabajo = `inicio`, última = `fin` (salta columnas de cancelado/anulado/rechazado); las de
 `espera`/`cancelado` por texto del nombre. La «etapa final» real se lee de
 `proyecto info` → `roles.fin`, sin asumir el nombre estándar.
 
@@ -898,7 +898,7 @@ Razón de ser: cabecera estándar del archivo por modelo. La crea el primer `cal
 | Razón de ser | Cada instancia es custom: el script necesita saber qué campos/etapas reales usar |
 | Lo crea | `doctor --proyecto <ID>` (borrador) + revisión del usuario |
 | Se actualiza | Al cambiar etapas en Odoo (re-correr doctor) o al confirmar el campo de tickets |
-| Roles de etapa | `doctor` asigna `inicio`/`fin` por orden de kanban (`sequence`, fallback `id`), saltando la columna de cancelado; `espera`/`cancelado` por texto del nombre. Así la IA sabe qué etapa es la «final» aun con nombres no estándar |
+| Roles de etapa | `doctor` asigna `inicio`/`fin` por orden de kanban (`sequence`), saltando las columnas de cancelado/anulado/rechazado; `espera`/`cancelado` por texto del nombre. La IA conoce la etapa final real vía `roles.fin`, sin asumir nombres |
 
 ```json
 {

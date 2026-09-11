@@ -572,9 +572,15 @@ Petición del usuario: «ajusta las horas de la tarea X a 1 hora». El CLI solo 
 Segunda petición: «¿la skill se adapta a las etapas de un proyecto?». La skill ya
 operaba con las **etapas reales** (nombres), y ahora además **autodetecta sus
 roles** por orden de kanban: `doctor` guarda `inicio`/`fin`/`espera`/`cancelado`
-en `config.json` → `roles` (la columna de cancelado no puede ser `fin`).
+en `config.json` → `roles` (las columnas de cancelado/anulado/rechazado no pueden ser `fin`).
 - `tarea crear` sin `--etapa` usa el rol `inicio` real.
-- Verificado: N1 68/68 · N2 2.22 (`doctor` roles) ⏳ en QA · CHANGELOG 1.0.0-rc4.
+- Validación en Cognitia (#15): durante F12-T1 se descubrieron dos bugs
+  (`sequence=0` tratado como falso → `inicio`/`fin` invertidos; columna
+  «Rechazado» no reconocida como excepción terminal). Corregidos, N1 71/71.
+  Roles de Cognitia corregidos: `inicio` = Nuevo · `fin` = Hecho ·
+  `cancelado` = Rechazado.
+- Verificado: N1 71/71 · N2 2.22 (`doctor` roles en QA) · F12-T1 (Cognitia real)
+  completado · CHANGELOG 1.0.0-rc6.
 
 Tercera petición: «la IA debe **preguntar la primera vez** antes de usar la
 skill, y si el usuario lo aprueba, usarla hasta que se diga lo contrario».

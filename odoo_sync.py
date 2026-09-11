@@ -139,7 +139,7 @@ def _rol_de_nombre(nombre):
         return None
     if "espera" in n:
         return "espera"
-    if "cancelad" in n or "anulad" in n:
+    if "cancelad" in n or "anulad" in n or "rechazad" in n:
         return "cancelado"
     return None
 
@@ -155,8 +155,9 @@ def asignar_roles(etapas):
     vacio = {"inicio": None, "fin": None, "espera": None, "cancelado": None}
     if not etapas:
         return vacio
-    ordenadas = sorted(etapas, key=lambda e: (e.get("sequence") or e["id"],
-                                              e["id"]))
+    ordenadas = sorted(etapas, key=lambda e: (e.get("sequence")
+                                              if e.get("sequence") is not None
+                                              else e["id"], e["id"]))
     inicio = None
     for e in ordenadas:
         if e.get("name") and _rol_de_nombre(e["name"]) != "cancelado":

@@ -2,6 +2,26 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc6] — 2026-09-11
+
+### Corregido
+- **Roles de etapa: `sequence=0` y columnas `Rechazado`**. Descubierto durante
+  la preparación de F12-T1 contra el proyecto real Cognitia (#15, Odoo 18, `https://app.yafexsrl.com`):
+  - **Bug `sequence=0`:** `e.get("sequence") or e["id"]` trataba la secuencia
+    0 (columna primera real) como falsa y caía al `id`, invirtiendo los roles
+    `inicio`/`fin`. Solución: usar `e.get("sequence") if e.get("sequence") is
+    not None else e["id"]`.
+  - **Columnas `Rechazado`:** no se reconocían como excepción terminal; una
+    columna «Rechazado» quedaba como `fin` (cuando debería ser `cancelado`).
+    Solución: añadir `"rechazad"` como sinónimo de cancelado en
+    `_rol_de_nombre()`. Documentado en SKILL.md/ARQUITECTURA.
+- N1 **71/71** en verde (3 tests nuevos: `sequence=0`, `Rechazado` como
+  cancelado, comportamiento real de Cognitia).
+- Preparación de **F12-T1** (proyecto real Cognitia): `.ia/` completo
+  (`.env` con URL/BD/API key/usuario, `config.json` escrito por `doctor`,
+  `FOCO.md` con vencimiento de API key 2026-12-11 y mapping ejecutivo
+  Rechazado→cancelado, `.gitignore` con entradas odoo-gestor).
+
 ## [1.0.0-rc5] — 2026-09-10
 
 ### Añadido

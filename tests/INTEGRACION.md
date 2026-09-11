@@ -106,3 +106,21 @@ endurece 3.10) y N1 re-ejecutada en verde.
 misión ficticia «módulo RRHH `hr_custom`» completada (6 tareas Odoo 62–67
 creadas y llevadas a Revisión; 19 archivos, ~580 líneas; 2 commits con línea
 `Validación`).
+
+## Pre-estreno real — F12-T1 sobre Cognitia (2026-09-11)
+
+Prueba de la skill contra el **proyecto real** ya preparado de Fase 12
+(`C:\Users\Laptop\Documents\Docker\Odoo19-Cognitia\addons`, Odoo 18 remoto
+https://app.yafexsrl.com, DB `yafex`):
+
+| # | Comprobación | Resultado |
+|---|---|---|
+| P1 | Conectividad + autenticación (API key) | ✅ `doctor` exit 0 · uid 37 «Luis Javier Espinosa Cutié» · `modo_horas: timesheet` |
+| P2 | Descubrir el proyecto | ✅ Cognitia = proyecto **#15** (13 proyectos en la instancia) |
+| P3 | `doctor --proyecto 15` → etapas y roles reales | ✅ etapas: Nuevo(140) → En desarrollo(141) → Revisión(144) → Hecho(142) · Rechazado(143) · roles: `inicio` Nuevo · `fin` Hecho · `cancelado` Rechazado |
+| P4 | ⚠️ Bugs capturados por el estreno | 🔴→🟢 `sequence=0` en «Nuevo» invertía `inicio`/`fin`; «Rechazado» no era excepción terminal. Corregidos (N1 71/71), roles recalculados correctos |
+| P5 | `config.json` escrito y válido | ✅ UTF-8, roles correctos; `state` real con `cambios`/`aprobado` |
+
+**Nota F12-T1.2 (mapeo ejecutivo):** en Cognitia la columna terminal es
+«Hecho»; «Rechazado» cumple el rol de cancelado y se registró así en
+`FOCO.md` + roles del config.
