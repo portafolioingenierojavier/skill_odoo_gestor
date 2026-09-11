@@ -871,6 +871,11 @@ class TestPlantillasCoherencia(unittest.TestCase):
                         "calibracion registrar", "calibracion stats", "raw"):
             self.assertIn(f"`{comando}", skill)
 
+    def test_skill_pide_autorizacion_inicial(self):
+        skill = (self.RAIZ / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("No la uses sin su confirmación", skill)
+        self.assertIn("AUTORIZACION", skill)
+
 
 if __name__ == "__main__":
     unittest.main()

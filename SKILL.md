@@ -23,8 +23,15 @@ description: Gestión del proyecto Odoo vinculado a este repo — tareas, etapas
 6. Si un comando falla: reporta el error tal cual. Si falta capacidad,
    propón ampliar el script. Nunca improvises alternativas.
 7. Actualiza `.ia/FOCO.md` al terminar cada bloque de trabajo y antes de pausar.
+8. **Autorización de uso (primera vez):** antes de empezar a usar la skill
+   (gestionar el proyecto Odoo de este repo), pregunta al usuario si puedes
+   usarla. No la uses sin su confirmación. Una vez aprobada, úsala sin volver a
+   preguntar hasta que el usuario te diga lo contrario; registra la
+   autorización en `.ia/actividad.log` para no re-pedirla en cada sesión.
 
 ## Arranque de sesión (siempre, en este orden)
+0. **Primera vez** (sin `AUTORIZACION` en `.ia/actividad.log`): pedir OK para
+   usar la skill y registrarlo (Regla dura 8).
 1. `python3 ~/.config/opencode/skill/odoo-gestor/odoo_sync.py now`
 2. Leer `.ia/FOCO.md` completo.
 3. `... calibracion stats --modelo <tu modelo>` — identifícate; si dudas,

@@ -2,6 +2,21 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc5] — 2026-09-10
+
+### Añadido
+- **Autorización de uso de la skill (primera vez)** (petición del usuario): la IA
+  debe preguntar antes de empezar a usar la skill y no usarla sin confirmación;
+  una vez aprobada, la usa hasta que se indique lo contrario.
+  - Regla dura 8 en `SKILL.md` y `docs/ARQUITECTURA.md`: registro de la
+    autorización como `AUTORIZACION` en `.ia/actividad.log` (no se re-pide en
+    cada sesión), vigente hasta revocación explícita.
+  - Paso 0 nuevo en el «Arranque de sesión»: pedir OK la primera vez.
+- Test de coherencia `test_skill_pide_autorizacion_inicial` en la batería N1
+  (la regla no puede desaparecer sin romper).
+- Contracto de comportamiento (N3) modificado → su re-validación queda fijada
+  en el gate G12.2 del estreno (Fase 12).
+
 ## [1.0.0-rc4] — 2026-09-10
 
 ### Añadido

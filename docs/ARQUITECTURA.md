@@ -127,8 +127,15 @@ description: Gestión del proyecto Odoo vinculado a este repo — tareas, etapas
 6. Si un comando falla: reporta el error tal cual. Si falta capacidad,
    propón ampliar el script. Nunca improvises alternativas.
 7. Actualiza `.ia/FOCO.md` al terminar cada bloque de trabajo y antes de pausar.
+8. **Autorización de uso (primera vez):** antes de empezar a usar la skill
+   (gestionar el proyecto Odoo de este repo), pregunta al usuario si puedes
+   usarla. No la uses sin su confirmación. Una vez aprobada, úsala sin volver a
+   preguntar hasta que el usuario te diga lo contrario; registra la
+   autorización en `.ia/actividad.log` para no re-pedirla en cada sesión.
 
 ## Arranque de sesión (siempre, en este orden)
+0. **Primera vez** (sin `AUTORIZACION` en `.ia/actividad.log`): pedir OK para
+   usar la skill y registrarlo (Regla dura 8).
 1. `python3 ~/.config/opencode/skill/odoo-gestor/odoo_sync.py now`
 2. Leer `.ia/FOCO.md` completo.
 3. `... calibracion stats --modelo <tu modelo>` — identifícate; si dudas,
@@ -999,7 +1006,10 @@ Instancias generadas desde plantillas. La calibración es **un archivo por model
 5. Ejecutar el plan de validación (§7) completo sobre QA-SKILL.
 
 ### 6.2 Arranque de sesión de la IA
-Checklist 1–5 de `SKILL.md`: `now` → FOCO → `calibracion stats` → `actividad.log` → resumen de 3 líneas y confirmación de la tarea a retomar.
+Checklist 0–5 de `SKILL.md`: (0) primera vez → pedir autorización de uso de la
+skill y registrarla (`AUTORIZACION` en `.ia/actividad.log`, regla dura 8) →
+`now` → FOCO → `calibracion stats` → `actividad.log` → resumen de 3 líneas y
+confirmación de la tarea a retomar.
 
 ### 6.3 Ciclo de vida de una tarea
 Etapas y criterios según §SKILL.md (Backlog → Especificaciones → En desarrollo → En pruebas → Revisión → Entregado, con Bloqueado vía estado nativo «en espera» y Cancelado solo por decisión del usuario). Toda transición la propone la IA con dry-run y la aplicas con tu OK.

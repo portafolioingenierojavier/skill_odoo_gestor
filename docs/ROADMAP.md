@@ -576,6 +576,14 @@ en `config.json` → `roles` (la columna de cancelado no puede ser `fin`).
 - `tarea crear` sin `--etapa` usa el rol `inicio` real.
 - Verificado: N1 68/68 · N2 2.22 (`doctor` roles) ⏳ en QA · CHANGELOG 1.0.0-rc4.
 
+Tercera petición: «la IA debe **preguntar la primera vez** antes de usar la
+skill, y si el usuario lo aprueba, usarla hasta que se diga lo contrario».
+- Regla dura 8 en SKILL.md/ARQUITECTURA: autorización inicial obligatoria,
+  registrada como `AUTORIZACION` en `.ia/actividad.log` (no se re-pide en cada
+  sesión), vigente hasta revocación. Paso 0 nuevo en el arranque de sesión.
+- Contracto de comportamiento (N3) con regla nueva → re-validar en el gate
+  G12.2 del estreno · CHANGELOG 1.0.0-rc5.
+
 ---
 
 ## FASE 12 — Estreno en el proyecto real (DoD global)
