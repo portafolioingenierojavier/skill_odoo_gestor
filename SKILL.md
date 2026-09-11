@@ -101,7 +101,7 @@ porque el ratio de desviación depende de quién estima.
 - No des por hecho un bloqueo del entorno: antes de afirmar que algo es
   imposible, ejecuta el comando en dry-run y muestra la salida real.
 
-## Comandos (índice — 17/17)
+## Comandos (índice — 18/18)
 | Comando | Tipo | Notas |
 |---|---|---|
 | `now` | local | reloj exacto |
@@ -113,7 +113,8 @@ porque el ratio de desviación depende de quién estima.
 | `tarea editar ID --set CAMPO=VALOR [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` reparenta |
 | `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
-| `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
+| `chatter post ID --desde-archivo F.md [--link URL]` | escritura | dry-run → `--confirm`; las URLs del mensaje salen clicables |
+| `chatter adjuntar ID --archivo RUTA [--archivo ...] [--mensaje]` | escritura | sube imágenes de la tarea al chatter; dry-run → `--confirm` |
 | `horas registrar ID --horas X --nota "..."` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo |
 | `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) |
 | `horas ajustar ID --horas X [--nota]` | escritura | dry-run → `--confirm`; whitelist `name`/`unit_amount` |
@@ -126,6 +127,25 @@ porque el ratio de desviación depende de quién estima.
 > `horas list ID`. Si tiene **más de un parte de horas**, muestra las líneas y
 > pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
 > propón el ajuste de esa línea con dry-run y espera el OK.
+
+## Enlaces e imágenes en el chatter
+**Enlaces para revisión:** si un enlace se va a dejar en la descripción (u otro
+campo) como referencia para revisar, publícalo **también** en el chatter de la
+tarea como recurso clicable: `chatter post ID --link URL` (repetible) o
+inclúyelo en `--mensaje`/`--desde-archivo` — el script convierte las URLs
+sueltas del mensaje a enlaces automáticamente. Los enlaces quedan clicables,
+aunque el texto de la descripción no lo sea.
+
+**Imágenes / evidencias (propuesta solo si aplica):**
+1. Propón adjuntar capturas al chatter **solo cuando aporte**: revisión
+   visual, pruebas de una tarea o un recurso útil. No lo sugieras en todas las
+   tareas ni lo hagas por iniciativa sin valor.
+2. Acuerda con el usuario **qué imágenes, dónde** y confirma la **ruta** que te
+   indique (p. ej. `C:\Users\...\captura.png`). Si el usuario te lo pide
+   explícitamente, hazlo por este medio.
+3. Sube con `chatter adjuntar ID --archivo RUTA --archivo ... [--mensaje ...]`
+   (dry-run → mostrar → `--confirm`). Solo imágenes
+   (PNG, JPG, GIF, WEBP, BMP, SVG), cada archivo ≤ 20 MB.
 
 ## Subtareas (tareas hijas reales)
 Cuando un proyecto modela **iniciativas con mejoras hijas** (p. ej. *Administradores: …*),

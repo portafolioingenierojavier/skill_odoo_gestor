@@ -204,7 +204,7 @@ porque el ratio de desviación depende de quién estima.
 - No des por hecho un bloqueo del entorno: antes de afirmar que algo es
   imposible, ejecuta el comando en dry-run y muestra la salida real.
 
-## Comandos (índice — 17/17)
+## Comandos (índice — 18/18)
 | Comando | Tipo | Notas |
 |---|---|---|
 | `now` | local | reloj exacto |
@@ -216,7 +216,8 @@ porque el ratio de desviación depende de quién estima.
 | `tarea editar ID --set CAMPO=VALOR [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` reparenta |
 | `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
-| `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
+| `chatter post ID --desde-archivo F.md [--link URL]` | escritura | dry-run → `--confirm`; las URLs del mensaje salen clicables |
+| `chatter adjuntar ID --archivo RUTA [--archivo ...] [--mensaje]` | escritura | sube imágenes de la tarea al chatter; dry-run → `--confirm` |
 | `horas registrar ID --horas X --nota "..."` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo |
 | `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) |
 | `horas ajustar ID --horas X [--nota]` | escritura | dry-run → `--confirm`; whitelist `name`/`unit_amount` |
@@ -230,6 +231,26 @@ porque el ratio de desviación depende de quién estima.
 > pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
 > propón el ajuste de esa línea con dry-run y espera el OK.
 ```
+
+**Enlaces e imágenes en el chatter (FASE 15):**
+- **Enlaces clicables:** la descripción de una tarea no enlaza por texto plano;
+  por eso `chatter post` acepta `--link URL` (repetible), que publica un ancla
+  `<a href target=_blank>` en el chatter, y convierte además cualquier URL
+  suelta del mensaje/archivo a ancla (función pura `conversion_links_html`,
+  que aparta los `<a>` existentes para no anidarlos). Contrato de
+  comportamiento: si un enlace se va a dejar en la descripción como
+  referencia, la IA lo publica también en el chatter como recurso.
+- **Imágenes evidencias:** `chatter adjuntar` valida los archivos **antes de
+  escribir** (fail before write): existen, no vacíos, ≤`MAX_IMAGEN_BYTES`
+  (20 MB) y formato real por magic bytes (`formato_imagen`: PNG/JPEG/GIF/WEBP/
+  BMP/SVG). Escribe `ir.attachment` acotado a la whitelist
+  `ADJUNTOS_EDITABLES` (`name`, `datas`, `type`, `res_model`, `res_id`,
+  `mimetype`) ligado a la tarea (aparece en el chatter) y, opcionalmente,
+  publica el `--mensaje`. Decisión de diseño: campos fijos del adjunto, nunca
+  un `--set` genérico (mismo criterio PAUTAS §6.3).
+- La IA **solo sugiere** adjuntar capturas cuando aportan (revisión visual,
+  pruebas); conversa qué imágenes/dónde y las sube por la ruta que indique el
+  usuario.
 
 **Subtareas (tareas hijas reales):** en proyectos con iniciativas que agrupan
 mejoras (*Administradores: …*), `tarea crear --padre ID` escribe el relacional
@@ -990,7 +1011,8 @@ Instancias generadas desde plantillas. La calibración es **un archivo por model
 | `proyecto info` | lectura | datos, etapas y roles del proyecto | 0, 1 |
 | `tarea get ID` · `tarea list` | lectura | — | 0, 1 |
 | `tarea crear` · `editar` · `etapa` · `estado` | **escritura** | dry-run → `--confirm`; `crear/editar` admiten `--padre ID` (subtarea real) | 2, 0, 1 |
-| `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
+| `chatter post ID --desde-archivo f.md [--link URL]` | **escritura** | dry-run → `--confirm`; URLs del mensaje clicables | 2, 0, 1 |
+| `chatter adjuntar ID --archivo RUTA [--mensaje]` | **escritura** | dry-run → `--confirm`; solo imágenes ≤20 MB; whitelist `name/datas/type/res_model/res_id/mimetype` | 2, 0, 1 |
 | `horas registrar ID --horas X --nota "..."` | **escritura** | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo | 2, 0, 1 |
 | `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) | 0, 1 |
 | `horas ajustar ID --horas X [--nota]` | **escritura** | dry-run → `--confirm`; whitelist `name`/`unit_amount` | 2, 0, 1 |

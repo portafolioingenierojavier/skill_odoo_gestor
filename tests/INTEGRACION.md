@@ -57,6 +57,8 @@ Ejecutar: `python -m unittest tests/test_odoo_sync.py -v`
 | 2.21 | ídem con `--confirm` | exit 0; línea en `actividad.log` | `horas list 62` refleja 0.5 | ✅ 0.5 h + log `horas ajustar` |
 | 2.22 | `doctor --proyecto 8` | `roles_detectados` con `inicio`/`fin`/`espera`/`cancelado` | `config.json.roles` == 1ª/última etapa real del kanban | ✅ `inicio` Backlog · `fin` Entregado · `cancelado` Cancelado |
 | 2.23 | `tarea crear --padre <ID> --nombre "[FEAT] Mejora" ` sin confirm → confirm · `tarea list --padre` · error padre inexistente | exit 2 con `padre` en propuesta; parent_id guardado; lista filtra hijas; exit 1 claro | Subtarea anidada en kanban · etapas/horas independientes | ✅ N1 84/84 🟢 |
+| 2.24 | `chatter post 61 --link https://…` sin confirm → confirm | exit 2 con `enlaces:[...]`; confirm → mensaje con `<a href>` clicable | URL visible como recurso en el chatter | 🧪 N1 101/101 🟢 · pendiente ejecución en vivo |
+| 2.25 | `chatter adjuntar 61 --archivo captura.png` sin confirm → confirm · error con .txt y con >20 MB | exit 2 con `archivos` (ruta/formato/mime/bytes); confirm → adjunto en chatter; exit 1 claro | Imagen subida + visible (recursos de la tarea) | 🧪 N1 101/101 🟢 · pendiente ejecución en vivo |
 
 **Resultado F10:** 18/18 en verde — ejecutado con `.ia/` recreado desde cero
 (config, calibración y log borrados; `.env` conservado) y config regenerado
@@ -85,6 +87,16 @@ vínculo se hace por argumento dedicado, no por `--set`. N1 **84/84** 🟢 (13
 tests nuevos); 2.23 🟢. Validado en Cognitia real: `doctor` detecta
 `subtarea: "parent_id"` y la instancia expone `parent_id`/`child_ids`/`subtask_count`
 sin bloqueo de jerarquía.
+
+**Enlaces e imágenes en el chatter (FASE 15, F15-T3):** por petición del
+usuario (links en la descripción no clicables + capturas como evidencias). `chatter
+post` admite `--link URL` y convierte automáticamente las URLs sueltas a anclas
+(`conversion_links_html` evita anidar `<a>` existentes; `validar_enlace` solo
+http/https); `chatter adjuntar` valida imágenes por magic bytes (≤20 MB) y
+escribe `ir.attachment` ligado a la tarea con whitelist fija. N1 **101/101** 🟢
+(17 tests nuevos); 2.24/2.25 🧪 **pendiente de ejecución en vivo**: el host de
+Cognitia no respondió (timeout) al intentar el dry-run — se ejecutará en cuanto
+esté disponible.
 
 ## Nivel 3 — Comportamiento de la IA (Fase 11)
 

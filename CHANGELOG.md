@@ -2,6 +2,35 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc8] — 2026-09-11
+
+### Añadido
+- **Enlaces clicables en el chatter** (petición del usuario: un link en la
+  descripción de una tarea no sale cliclable):
+  - `chatter post --link URL` (repetible) publica anclas clicables; además el
+    script convierte automáticamente las URLs sueltas del mensaje/archivo en
+    enlaces (`conversion_links_html`, sin tocar `<a>` existentes) y
+    `validar_enlace` solo admite http/https sin caracteres que rompan HTML.
+  - Contrato de comportamiento (SKILL.md/ARQUITECTURA): si un enlace se deja en
+    la descripción como referencia, se publica **también** en el chatter como
+    recurso clicable.
+- **Subida de imágenes al chatter** (petición del usuario: capturas como
+  evidencias en la tarea):
+  - Nuevo comando `chatter adjuntar ID --archivo RUTA … [--mensaje]`
+    (**18.º**): valida los archivos antes de escribir (existen, no vacíos,
+    ≤ `MAX_IMAGEN_BYTES` = 20 MB, formato real por magic bytes:
+    PNG/JPG/GIF/WEBP/BMP/SVG) y escribe `ir.attachment` ligado a la tarea con
+    whitelist fija `ADJUNTOS_EDITABLES` (`name`, `datas`, `type`, `res_model`,
+    `res_id`, `mimetype`); dry-run → `--confirm`.
+  - La IA **solo sugiere** adjuntar capturas cuando aportan (revisión visual,
+    pruebas); el usuario indica las rutas y decide.
+- Verificado: N1 **101/101** en verde (17 tests nuevos: `TestEnlacesYAdjuntos`
+  + índice de SKILL.md a 18/18); N2 casos 2.24 y 2.25 añadidos.
+- Docs actualizadas: SKILL.md, ARQUITECTURA (tablas, whitelist, sección
+  narrativa), README, ROADMAP Fase 15, INTEGRACION.md.
+- **Pendiente:** validación en vivo contra Cognitia (timeout del host al
+  escribir esto) con dry-run de `chatter post --link` y `chatter adjuntar`.
+
 ## [1.0.0-rc7] — 2026-09-11
 
 ### Añadido

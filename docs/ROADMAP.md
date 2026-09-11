@@ -691,6 +691,39 @@ de verdad** en el kanban, no solo por convención de nombres.
 
 ---
 
+## FASE 15 — Ampliación aprobada: enlaces e imágenes en el chatter (2026-09-11)
+
+Solicitud del usuario («si pongo un link en la descripción de una tarea no sale
+cliclable») y de evidencias visuales en las tareas (capturas para revisión,
+pruebas o recurso extra).
+
+### F15-T1 · Enlaces clicables en el chatter
+- `chatter post [--link URL]` (repetible) publica anclas `<a … target=_blank>`
+  en el chatter; cualquier URL suelta del mensaje o archivo también se convierte
+  (`conversion_links_html`, función pura que aparta los `<a>` existentes para
+  no anidarlos; `validar_enlace` solo admite http/https sin caracteres que
+  rompan HTML).
+- Contrato de comportamiento (SKILL.md): si un enlace se deja en la descripción
+  como referencia, la IA lo publica **también** en el chatter como recurso.
+
+### F15-T2 · Subida de imágenes al chatter
+- Nuevo comando `chatter adjuntar ID --archivo RUTA … [--mensaje]` (el
+  **18.º**): valida antes de escribir (existe, no vacío, ≤20 MB, formato real
+  por magic bytes PNG/JPG/GIF/WEBP/BMP/SVG) y escribe `ir.attachment` ligado a
+  la tarea con whitelist fija `ADJUNTOS_EDITABLES`; dry-run → `--confirm`.
+- La IA solo **sugiere** adjuntar si aporta (revisión visual/pruebas); el
+  usuario indica las rutas y decide.
+
+### F15-T3 · Tests y docs
+- N1: **101/101** en verde (17 tests nuevos: `TestEnlacesYAdjuntos` +
+  índice 18/18). N2: casos **2.24** (link) y **2.25** (adjuntar) en
+  `tests/INTEGRACION.md`.
+- CHANGELOG **1.0.0-rc8** · SKILL.md, ARQUITECTURA, README y este roadmap en el
+  mismo commit. Validación en vivo (Cognitia) pendiente: el host no respondió
+  (timeout) — se re-ejecutará con dry-run cuando esté disponible.
+
+---
+
 ## §15. Mapa de cobertura total (la garantía de «nada sin cubrir»)
 
 **A. Requisitos del usuario (las 12 respuestas de diseño):**
@@ -727,7 +760,7 @@ de verdad** en el kanban, no solo por convención de nombres.
 | 1.11 credenciales intocables | F0-T3, F3-T4 · G3, G8 (auditoría 5/5) |
 | 1.12 bug → test primero | Regla transversal §0 + F11-T3 |
 
-**C. Comandos del CLI (17/17):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5; `--padre` en crear/editar y `list --padre` por F14) · chatter post (F6) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 17/17 en G9 + ajuste pre-estreno + F14.
+**C. Comandos del CLI (18/18):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5; `--padre` en crear/editar y `list --padre` por F14) · chatter post (F6; `--link` y URLs clicables por F15) · chatter adjuntar (**F15**) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 18/18 en G9 + ajuste pre-estreno + F14 + F15.
 
 **D. Protocolos de SKILL.md:** arranque (F11-T2 3.1) · guard (3.3) · dos fases (3.4) · anti-invención (3.5) · hora (3.2) · estimación con ratio (3.7) · desviación (3.8) · cierre completo (3.9) · manejo de fallos (3.10).
 
@@ -758,8 +791,9 @@ de verdad** en el kanban, no solo por convención de nombres.
 | 12 Estreno real + DoD global | G12 | | | | ⏳ |
 | 13 Post-estreno | G13 | | | | ⏳ |
 | 14 Subtareas reales (ampliación aprobada) | G14 | 2026-09-11 | 0h30 | 0h30 | ✅ |
+| 15 Enlaces e imágenes en el chatter (ampliación aprobada) | G15 | 2026-09-11 | 0h30 | 0h30 | ✅ |
 
-> **Estado final válido únicamente cuando las 15 filas estén ✅ con G12 en verde.**
+> **Estado final válido únicamente cuando las 16 filas estén ✅ con G12 en verde.**
 
 ---
 

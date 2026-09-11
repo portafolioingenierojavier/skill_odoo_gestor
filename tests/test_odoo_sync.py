@@ -983,6 +983,134 @@ class TestSubtareas(unittest.TestCase):
         self.assertIn("7", captured["mensaje"])
 
 
+class TestEnlacesYAdjuntos(unittest.TestCase):
+    """FASE 15 (rc8): enlaces clicables en el chatter e imágenes adjuntas."""
+
+    def test_parser_post_acepta_link(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["chatter", "post", "7", "--link", "https://a.example/x"])
+        self.assertEqual(args.link, ["https://a.example/x"])
+
+    def test_parser_post_varios_links(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["chatter", "post", "7", "--link", "https://a.example/1",
+             "--link", "https://a.example/2"])
+        self.assertEqual(args.link, ["https://a.example/1", "https://a.example/2"])
+
+    def test_parser_adjuntar_acepta_archivos(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["chatter", "adjuntar", "7", "--archivo", "a.png", "--archivo", "b.jpg"])
+        self.assertEqual(args.archivo, ["a.png", "b.jpg"])
+
+    def test_parser_adjuntar_exige_archivo(self):
+        mod = cargar_modulo()
+        with self.assertRaises(SystemExit):
+            mod.construir_parser().parse_args(["chatter", "adjuntar", "7"])
+
+    def test_validar_enlace_http_ok(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.validar_enlace("https://a.example/x"),
+                         "https://a.example/x")
+
+    def test_validar_enlace_rechaza_no_http(self):
+        mod = cargar_modulo()
+        with self.assertRaises(SystemExit):
+            mod.validar_enlace("ftp://a.example/x")
+        with self.assertRaises(SystemExit):
+            mod.validar_enlace("a.example/x")
+
+    def test_validar_enlace_rechaza_inyeccion(self):
+        mod = cargar_modulo()
+        with self.assertRaises(SystemExit):
+            mod.validar_enlace('https://a.example/x" onclick="x')
+
+    def test_conversion_links_html_envuelve_urls(self):
+        mod = cargar_modulo()
+        salida = mod.conversion_links_html("Mira https://a.example/x fin")
+        self.assertIn('<a href="https://a.example/x" target="_blank">'
+                      "https://a.example/x</a>", salida)
+
+    def test_conversion_links_html_no_toca_anclas_existentes(self):
+        mod = cargar_modulo()
+        texto = '<a href="https://old.example">link</a> y https://new.example'
+        salida = mod.conversion_links_html(texto)
+        self.assertIn('<a href="https://old.example">link</a>', salida)
+        self.assertEqual(salida.count("href="), 2)
+        self.assertNotIn('<a href="https://old.example">https://old.example', salida)
+
+    def test_conversion_links_html_sin_urls_interna(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.conversion_links_html("sin enlaces"), "sin enlaces")
+
+    def test_formato_imagen_detecta_png_jpeg_svg(self):
+        mod = cargar_modulo()
+        with tempfile.TemporaryDirectory() as d:
+            png = Path(d) / "a.png"
+            png.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 32)
+            jpg = Path(d) / "b.jpg"
+            jpg.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 32)
+            svg = Path(d) / "c.svg"
+            svg.write_text('<?xml version="1.0"?><svg '
+                           'xmlns="http://www.w3.org/2000/svg"/>', encoding="utf-8")
+            basura = Path(d) / "d.png"
+            basura.write_bytes(b"not an image at all")
+            self.assertEqual(mod.formato_imagen(png), "PNG")
+            self.assertEqual(mod.formato_imagen(jpg), "JPEG")
+            self.assertEqual(mod.formato_imagen(svg), "SVG")
+            self.assertIsNone(mod.formato_imagen(basura))
+
+    def test_preparar_adjuntos_ficha_valida(self):
+        mod = cargar_modulo()
+        with tempfile.TemporaryDirectory() as d:
+            png = Path(d) / "shot.png"
+            png.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64)
+            fichas = mod.preparar_adjuntos([str(png)])
+            self.assertEqual(len(fichas), 1)
+            self.assertEqual(fichas[0]["formato"], "PNG")
+            self.assertEqual(fichas[0]["mime"], "image/png")
+            self.assertEqual(fichas[0]["nombre"], "shot.png")
+
+    def test_preparar_adjuntos_archivo_inexistente(self):
+        mod = cargar_modulo()
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(SystemExit):
+                mod.preparar_adjuntos([str(Path(d) / "no.png")])
+
+    def test_preparar_adjuntos_vacio_error(self):
+        mod = cargar_modulo()
+        with tempfile.TemporaryDirectory() as d:
+            vacio = Path(d) / "vacio.png"
+            vacio.touch()
+            with self.assertRaises(SystemExit):
+                mod.preparar_adjuntos([str(vacio)])
+
+    def test_preparar_adjuntos_muy_grande_error(self):
+        mod = cargar_modulo()
+        with tempfile.TemporaryDirectory() as d:
+            grande = Path(d) / "grande.png"
+            grande.write_bytes(b"\x89PNG\r\n\x1a\n"
+                               + b"\x00" * (mod.MAX_IMAGEN_BYTES + 1))
+            with self.assertRaises(SystemExit):
+                mod.preparar_adjuntos([str(grande)])
+
+    def test_preparar_adjuntos_no_imagen_error(self):
+        mod = cargar_modulo()
+        with tempfile.TemporaryDirectory() as d:
+            raro = Path(d) / "nota.txt"
+            raro.write_text("hola", encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                mod.preparar_adjuntos([str(raro)])
+
+    def test_whitelist_adjuntos_fija(self):
+        mod = cargar_modulo()
+        self.assertEqual(sorted(mod.ADJUNTOS_EDITABLES),
+                         ["datas", "mimetype", "name", "res_id", "res_model",
+                          "type"])
+
+
 class TestPlantillasCoherencia(unittest.TestCase):
     """F9-T2: coherencia plantillas ↔ parser ↔ SKILL.md."""
 
@@ -1014,11 +1142,12 @@ class TestPlantillasCoherencia(unittest.TestCase):
         self.assertIn("estimado_h:", plantilla)
         self.assertIn("interrupciones:si|no", plantilla)
 
-    def test_skill_indice_cubre_los_17_comandos(self):
+    def test_skill_indice_cubre_los_18_comandos(self):
         skill = (self.RAIZ / "SKILL.md").read_text(encoding="utf-8")
         for comando in ("now", "doctor", "proyecto info", "tarea get",
                         "tarea list", "tarea crear", "tarea editar",
                         "tarea etapa", "tarea estado", "chatter post",
+                        "chatter adjuntar",
                         "horas registrar", "horas list", "horas ajustar",
                         "ticket vincular",
                         "calibracion registrar", "calibracion stats", "raw"):

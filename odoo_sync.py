@@ -13,6 +13,7 @@ Credenciales : .ia/.env o variables de entorno (nunca versionadas).
 Dependencias : únicamente la librería estándar de Python.
 """
 import argparse
+import base64
 import datetime as dt
 import json
 import math
@@ -44,6 +45,21 @@ ESTADOS = {  # alias amigable → valor real del campo state (QA, Odoo 18-202606
 EDITABLES = ("name", "description", "date_deadline", "planned_hours")
 
 HORAS_EDITABLES = ("name", "unit_amount")
+
+ADJUNTOS_EDITABLES = ("name", "datas", "type", "res_model", "res_id", "mimetype")
+
+MAX_IMAGEN_BYTES = 20 * 1024 * 1024  # tope por archivo adjunto (xmlrpc práctico)
+
+MIMES_IMAGEN = {
+    "PNG": "image/png",
+    "JPEG": "image/jpeg",
+    "GIF": "image/gif",
+    "WEBP": "image/webp",
+    "BMP": "image/bmp",
+    "SVG": "image/svg+xml",
+}
+
+PATRON_URL = re.compile(r"https?://[^\s<>\"']+")
 
 LECTURA_CRUDA = ("search_read", "read", "fields_get", "search_count")
 
@@ -269,6 +285,74 @@ def texto_o_archivo(valor):
             error(f"Archivo no encontrado: {ruta}")
         return ruta.read_text(encoding="utf-8").strip()
     return valor
+
+
+def validar_enlace(url):
+    """Valida un enlace para el chatter: solo http(s), sin espacio ni comillas."""
+    if not re.match(r"^https?://[^\s\"<>]+$", url):
+        error("Enlace inválido (debe empezar por http:// o https:// y no llevar "
+              "espacios ni caracteres que rompan el HTML): " + url)
+    return url
+
+
+def conversion_links_html(texto):
+    """Convierte URLs sueltas en enlaces clicables, sin tocar anclas existentes."""
+    anclas = []
+
+    def apartar(m):
+        anclas.append(m.group(0))
+        return "\x00ANCLA\x00"
+
+    sin_anclas = re.sub(r"<(?i:a)\b[^>]*>.*?</(?i:a)>", apartar, texto, flags=re.S)
+    cuerpo = PATRON_URL.sub(
+        lambda m: f'<a href="{m.group(0)}" target="_blank">{m.group(0)}</a>',
+        sin_anclas)
+    for a in anclas:
+        cuerpo = cuerpo.replace("\x00ANCLA\x00", a, 1)
+    return cuerpo
+
+
+def formato_imagen(ruta):
+    """Detecta el formato real de una imagen por cabecera (magic bytes)."""
+    with ruta.open("rb") as f:
+        cab = f.read(512)
+    if cab.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "PNG"
+    if cab[:3] == b"\xff\xd8\xff":
+        return "JPEG"
+    if cab[:6] in (b"GIF87a", b"GIF89a"):
+        return "GIF"
+    if cab[:4] == b"RIFF" and cab[8:12] == b"WEBP":
+        return "WEBP"
+    if cab[:2] == b"BM":
+        return "BMP"
+    if b"<svg" in cab.lower():
+        return "SVG"
+    return None
+
+
+def preparar_adjuntos(archivos):
+    """Valida archivos de imagen locales y devuelve sus fichas (sin leer datos)."""
+    fichas = []
+    for r in archivos:
+        p = Path(r)
+        if not p.exists():
+            error(f"Archivo no encontrado: {p}")
+        if not p.is_file():
+            error(f"No es un archivo: {p}")
+        tam = p.stat().st_size
+        if tam <= 0:
+            error(f"El archivo está vacío: {p}")
+        if tam > MAX_IMAGEN_BYTES:
+            error(f"Imagen demasiado grande ({tam} bytes, máximo "
+                  f"{MAX_IMAGEN_BYTES}): {p}")
+        formato = formato_imagen(p)
+        if not formato:
+            error(f"No es una imagen reconocida: {p} "
+                  "(PNG, JPG, GIF, WEBP, BMP o SVG)")
+        fichas.append({"ruta": str(p), "nombre": p.name, "formato": formato,
+                       "mime": MIMES_IMAGEN[formato], "bytes": tam})
+    return fichas
 
 
 # ------------------------------------------------------------------ cliente
@@ -507,15 +591,59 @@ def cmd_chatter_post(args):
     odoo, _ = conexion_y_config()
     cuerpo = (texto_o_archivo(f"@{args.desde_archivo}") if args.desde_archivo
               else (args.mensaje or ""))
+    enlaces = []
+    for u in (args.link or []):
+        valido = validar_enlace(u)
+        ancla = f'<a href="{valido}" target="_blank">{valido}</a>'
+        cuerpo = (cuerpo + "<br/>" if cuerpo.strip() else "") + ancla
+        enlaces.append(valido)
     if not cuerpo.strip():
-        error("Mensaje vacío: usa --desde-archivo ARCHIVO o --mensaje TEXTO")
+        error("Mensaje vacío: usa --desde-archivo ARCHIVO, --mensaje TEXTO "
+              "o --link URL")
     propuesta = {"accion": "publicar en chatter", "tarea": f"#{args.id}",
-                 "longitud": len(cuerpo), "vista_previa": cuerpo[:300]}
+                 "longitud": len(cuerpo), "enlaces": enlaces,
+                 "vista_previa": cuerpo[:300]}
     if not args.confirm:
         dry_run(propuesta)
-    odoo.ejec("project.task", "message_post", [args.id], body=cuerpo)
-    registrar_actividad("chatter post", f"#{args.id} ({len(cuerpo)} caracteres)")
-    ok({"id": args.id, "publicado": True, "caracteres": len(cuerpo)})
+    odoo.ejec("project.task", "message_post", [args.id],
+              body=conversion_links_html(cuerpo))
+    registrar_actividad("chatter post", f"#{args.id} ({len(cuerpo)} caracteres)"
+                        + (f", {len(enlaces)} enlace(s)" if enlaces else ""))
+    ok({"id": args.id, "publicado": True, "caracteres": len(cuerpo),
+        "enlaces": enlaces})
+
+
+def cmd_chatter_adjuntar(args):
+    odoo, _ = conexion_y_config()
+    if not odoo.ejec("project.task", "read", [args.id], fields=["name"]):
+        error(f"No existe (o no puedes ver) la tarea {args.id}")
+    fichas = preparar_adjuntos(args.archivo)
+    mensaje = (texto_o_archivo(f"@{args.mensaje}") if args.mensaje
+               and args.mensaje.startswith("@") else (args.mensaje or "")).strip()
+    propuesta = {"accion": "adjuntar imagenes al chatter",
+                 "tarea": f"#{args.id}", "archivos": fichas,
+                 "mensaje": mensaje or None}
+    if not args.confirm:
+        dry_run(propuesta)
+    adjuntos = []
+    for f in fichas:
+        b64 = base64.b64encode(Path(f["ruta"]).read_bytes()).decode("ascii")
+        vals = {"name": f["nombre"], "datas": b64, "type": "binary",
+                "res_model": "project.task", "res_id": args.id,
+                "mimetype": f["mime"]}
+        ilegal = [c for c in vals if c not in ADJUNTOS_EDITABLES]
+        if ilegal:
+            error("Campo no permitido en adjunto: " + ", ".join(ilegal))
+        nuevo = odoo.ejec("ir.attachment", "create", [vals])
+        adjuntos.append({"id": nuevo, "nombre": f["nombre"], "mime": f["mime"]})
+    mensaje_id = None
+    if mensaje:
+        mensaje_id = odoo.ejec("project.task", "message_post", [args.id],
+                               body=conversion_links_html(mensaje))
+    registrar_actividad("chatter adjuntar",
+                        f"#{args.id} adjuntos={len(adjuntos)}"
+                        + (f" msg={mensaje_id}" if mensaje_id else ""))
+    ok({"tarea": args.id, "adjuntos": adjuntos, "mensaje_id": mensaje_id})
 
 
 def cmd_cal_stats(args):
@@ -758,11 +886,23 @@ def construir_parser():
     st.add_argument("--confirm", action="store_true")
 
     cha = sub.add_parser("chatter")
-    ch = cha.add_subparsers(dest="accion", required=True).add_parser("post")
+    chsub = cha.add_subparsers(dest="accion", required=True)
+    ch = chsub.add_parser("post", help="Publica un mensaje en el chatter")
     ch.add_argument("id", type=int)
     ch.add_argument("--desde-archivo")
     ch.add_argument("--mensaje")
+    ch.add_argument("--link", action="append", metavar="URL",
+                    help="enlace clicable (repetible); las URLs del mensaje se "
+                         "convierten también automáticamente")
     ch.add_argument("--confirm", action="store_true")
+    adj = chsub.add_parser("adjuntar",
+                           help="Adjunta imágenes al chatter de la tarea")
+    adj.add_argument("id", type=int)
+    adj.add_argument("--archivo", action="append", required=True, metavar="RUTA",
+                     help="imagen local (PNG/JPG/GIF/WEBP/BMP/SVG), repetible")
+    adj.add_argument("--mensaje",
+                     help="mensaje opcional que acompaña a los adjuntos")
+    adj.add_argument("--confirm", action="store_true")
 
     hor = sub.add_parser("horas")
     hs = hor.add_subparsers(dest="accion", required=True)
@@ -826,7 +966,7 @@ def main():
          "editar": cmd_tarea_editar, "etapa": cmd_tarea_etapa,
          "estado": cmd_tarea_estado}[args.accion](args)
     elif args.grupo == "chatter":
-        cmd_chatter_post(args)
+        {"post": cmd_chatter_post, "adjuntar": cmd_chatter_adjuntar}[args.accion](args)
     elif args.grupo == "horas":
         {"registrar": cmd_horas, "list": cmd_horas_list,
          "ajustar": cmd_horas_ajustar}[args.accion](args)

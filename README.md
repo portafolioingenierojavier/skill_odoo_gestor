@@ -17,7 +17,7 @@
 
 [![estado](https://img.shields.io/badge/estado-en_desarrollo_activo-22C55E?style=for-the-badge)](#)
 [![dependencias](https://img.shields.io/badge/dependencias-0-22C55E?style=for-the-badge)](#)
-[![unit tests](https://img.shields.io/badge/unit_tests-N1_71%2F71-22C55E?style=for-the-badge)](#)
+[![unit tests](https://img.shields.io/badge/unit_tests-N1_101%2F101-22C55E?style=for-the-badge)](#)
 [![escrituras](https://img.shields.io/badge/escrituras-2_fases-7B2FBE?style=for-the-badge)](#)
 [![diseño](https://img.shields.io/badge/dise%C3%B1o-v1.0_aprobado-4CC9F0?style=for-the-badge)](#)
 
@@ -69,7 +69,7 @@
 
 | 🔧 Dependencias | 🌉 Puentes a Odoo | 🛡️ Fases por escritura | 🧪 Niveles de prueba | ⌨️ Comandos |
 |:---:|:---:|:---:|:---:|:---:|
-| **0** · solo stdlib | **1** · `odoo_sync.py` | **2** · dry-run → `--confirm` | **3** · unit · integración · IA | **17** · en 10 grupos |
+| **0** · solo stdlib | **1** · `odoo_sync.py` | **2** · dry-run → `--confirm` | **3** · unit · integración · IA | **18** · en 10 grupos |
 
 </div>
 
@@ -233,7 +233,7 @@ sequenceDiagram
 ## ⌨️ Referencia del CLI
 
 <details open>
-<summary><b>Los 17 comandos de <code>odoo_sync.py</code> (10 grupos)</b></summary>
+<summary><b>Los 18 comandos de <code>odoo_sync.py</code> (10 grupos)</b></summary>
 
 | Comando | Tipo | Confirmación | Exit |
 |---|---|---|:---:|
@@ -242,7 +242,8 @@ sequenceDiagram
 | `proyecto info` | lectura | datos, etapas y roles del proyecto | `0 · 1` |
 | `tarea get ID` · `tarea list` | lectura | — | `0 · 1` |
 | `tarea crear · editar · etapa · estado` | **escritura** | dry-run → `--confirm`; `crear`/`editar` admiten `--padre ID` (subtarea real) | `2 · 0 · 1` |
-| `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
+| `chatter post ID --desde-archivo f.md [--link URL]` | **escritura** | dry-run → `--confirm`; URLs del mensaje clicables | `2 · 0 · 1` |
+| `chatter adjuntar ID --archivo RUTA ... [--mensaje]` | **escritura** | sube imágenes al chatter (≤20 MB); dry-run → `--confirm` | `2 · 0 · 1` |
 | `horas registrar ID --horas X --nota "..."` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
 | `horas list ID` | lectura | líneas de timesheet de la tarea | `0 · 1` |
 | `horas ajustar ID --horas X [--nota]` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
@@ -360,7 +361,7 @@ estado en 3 líneas y confirma qué tarea se retoma.
 ### v1.0 — implementación y estreno real
 
 - [x] Diseño de la arquitectura v1.0 (`ARQUITECTURA.md` como fuente única de verdad)
-- [x] `odoo_sync.py`: 17 comandos en 10 grupos, whitelist, dos fases, JSON por stdout
+- [x] `odoo_sync.py`: 18 comandos en 10 grupos, whitelist, dos fases, JSON por stdout
 - [x] `SKILL.md`: reglas, arranque de sesión, ciclo de tarea, protocolo de tiempo
 - [x] Plantillas de FOCO y calibración
 - [x] Tests unitarios — nivel 1 sin Odoo (**50/50 en verde**)
@@ -377,6 +378,9 @@ estado en 3 líneas y confirma qué tarea se retoma.
 - [x] **Ampliación aprobada (1.0.0-rc7): subtareas reales** — `tarea crear`/
   `editar --padre ID` (jerarquía anidada en kanban), `doctor` detecta
   `parent_id`, `tarea list --padre`; N1 **84/84** · validado en Cognitia
+- [x] **Ampliación aprobada (1.0.0-rc8): enlaces e imágenes en el chatter** —
+  links clicables (`chatter post --link` + autoconversión de URLs) y subida de
+  capturas a la tarea (`chatter adjuntar`); N1 **101/101**
 - [ ] Fase 12 — **Estreno en el proyecto real + DoD global (G12)**: F12-T1
   completado en **Cognitia** (Odoo 18 remoto · proyecto #15 · `config.json` y
   roles reales · API key con vencimiento 2026-12-11 registrado) · F12-T2
