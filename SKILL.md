@@ -105,12 +105,12 @@ porque el ratio de desviación depende de quién estima.
 | Comando | Tipo | Notas |
 |---|---|---|
 | `now` | local | reloj exacto |
-| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas, roles y el campo de subtarea; escribe config |
 | `proyecto info` | lectura | datos, etapas y roles del proyecto |
 | `tarea get ID` | lectura | campos según config + chatter |
-| `tarea list` | lectura | filtros `--etapa --estado --limite` |
-| `tarea crear --nombre ...` | escritura | dry-run → `--confirm` |
-| `tarea editar ID --set CAMPO=VALOR` | escritura | dry-run → `--confirm` |
+| `tarea list` | lectura | filtros `--etapa --estado --padre --limite` |
+| `tarea crear --nombre ... [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` crea subtarea real |
+| `tarea editar ID --set CAMPO=VALOR [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` reparenta |
 | `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
 | `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
@@ -126,3 +126,15 @@ porque el ratio de desviación depende de quién estima.
 > `horas list ID`. Si tiene **más de un parte de horas**, muestra las líneas y
 > pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
 > propón el ajuste de esa línea con dry-run y espera el OK.
+
+## Subtareas (tareas hijas reales)
+Cuando un proyecto modela **iniciativas con mejoras hijas** (p. ej. *Administradores: …*),
+usa `tarea crear --padre <ID>` para crear la subtarea real (campo `parent_id` que
+detecta `doctor` en `campos.subtarea`) y el kanban la anida bajo la general.
+- Regla de seguridad: el padre debe **existir y pertenecer al proyecto** del repo
+  (error claro en otro caso); una subtarea no puede saltar de proyecto.
+- El padre se ve en `tarea get` (campo `parent_id`) y `tarea list --padre <ID>`
+  filtra solo las hijas.
+- Etapas/horas/chatter **independientes por tarea**: mover la general no arrastra
+  a las hijas ni viceversa.
+- `tarea editar ID --padre <ID>` permite reparentar (misma validación).

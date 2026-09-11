@@ -211,9 +211,9 @@ porque el ratio de desviación depende de quién estima.
 | `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config |
 | `proyecto info` | lectura | datos, etapas y roles del proyecto |
 | `tarea get ID` | lectura | campos según config + chatter |
-| `tarea list` | lectura | filtros `--etapa --estado --limite` |
-| `tarea crear --nombre ...` | escritura | dry-run → `--confirm` |
-| `tarea editar ID --set CAMPO=VALOR` | escritura | dry-run → `--confirm` |
+| `tarea list` | lectura | filtros `--etapa --estado --padre --limite` |
+| `tarea crear --nombre ... [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` crea subtarea real |
+| `tarea editar ID --set CAMPO=VALOR [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` reparenta |
 | `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
 | `chatter post ID --desde-archivo F.md` | escritura | dry-run → `--confirm` |
@@ -230,6 +230,22 @@ porque el ratio de desviación depende de quién estima.
 > pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
 > propón el ajuste de esa línea con dry-run y espera el OK.
 ```
+
+**Subtareas (tareas hijas reales):** en proyectos con iniciativas que agrupan
+mejoras (*Administradores: …*), `tarea crear --padre ID` escribe el relacional
+`campos.subtarea` (`parent_id` estándar) y el kanban anida la hija bajo la
+general. Decisiones de diseño (ampliación de whitelist, PAUTAS §6.3):
+
+- `EDITABLES` **no cambia**: el vínculo se hace con el argumento dedicado
+  `--padre` en `crear`/`editar`, nunca por `--set parent_id=…` (evita inyectar
+  un relacional por el parser genérico). Decisión explícita documentada.
+- `resolver_padre()` valida **antes de escribir** (fail before write): el padre
+  debe existir y pertenecer al proyecto del repo; error claro (exit 1) en otro caso.
+- `doctor` anota `campos.subtarea` en `config.json`; si la instancia no lo
+  expone, `--padre` devuelve error accionable indicando re-correr doctor.
+- `tarea get` muestra el padre (`parent_id` con `[id, nombre]`); `tarea list
+  --padre ID` filtra por las hijas; etapas/horas/chatter siguen siendo
+  **independientes por tarea** (mover la general no arrastra a sus hijas).
 
 ### 4.2 `odoo_sync.py` (global)
 
@@ -897,15 +913,16 @@ Razón de ser: cabecera estándar del archivo por modelo. La crea el primer `cal
 |---|---|
 | Razón de ser | Cada instancia es custom: el script necesita saber qué campos/etapas reales usar |
 | Lo crea | `doctor --proyecto <ID>` (borrador) + revisión del usuario |
-| Se actualiza | Al cambiar etapas en Odoo (re-correr doctor) o al confirmar el campo de tickets |
+| Se actualiza | Al cambiar etapas en Odoo (re-correr doctor) o al confirmar el campo de tickets / de subtareas |
 | Roles de etapa | `doctor` asigna `inicio`/`fin` por orden de kanban (`sequence`), saltando las columnas de cancelado/anulado/rechazado; `espera`/`cancelado` por texto del nombre. La IA conoce la etapa final real vía `roles.fin`, sin asumir nombres |
+| Campo de subtarea | `campos.subtarea` es el nombre real del relacional padre→hija (`parent_id` estándar; `doctor` lo detecta por `fields_get`) |
 
 ```json
 {
   "proyecto_id": 12,
   "creado": "2025-01-15",
   "campos": {"asignacion": "user_ids", "planned_hours": true,
-             "state": true, "tickets": ["x_ticket_ids"]},
+             "state": true, "tickets": ["x_ticket_ids"], "subtarea": "parent_id"},
   "modo_horas": "timesheet",
   "etapas": {"Backlog": 10, "Especificaciones": 11, "En desarrollo": 12,
              "En pruebas": 13, "Revisión": 14, "Entregado": 15},
@@ -969,10 +986,10 @@ Instancias generadas desde plantillas. La calibración es **un archivo por model
 | Comando | Tipo | Confirmación | Exit esperados |
 |---|---|---|---|
 | `now` | lectura local | — | 0 |
-| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config | 0, 1 |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas, roles y el campo de subtarea; escribe config | 0, 1 |
 | `proyecto info` | lectura | datos, etapas y roles del proyecto | 0, 1 |
 | `tarea get ID` · `tarea list` | lectura | — | 0, 1 |
-| `tarea crear` · `editar` · `etapa` · `estado` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
+| `tarea crear` · `editar` · `etapa` · `estado` | **escritura** | dry-run → `--confirm`; `crear/editar` admiten `--padre ID` (subtarea real) | 2, 0, 1 |
 | `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
 | `horas registrar ID --horas X --nota "..."` | **escritura** | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo | 2, 0, 1 |
 | `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) | 0, 1 |

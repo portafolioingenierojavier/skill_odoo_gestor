@@ -2,6 +2,30 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc7] — 2026-09-11
+
+### Añadido
+- **Subtareas reales (tareas hijas en kanban)** (petición del usuario: las
+  iniciativas debían verse anidadas, no solo por prefijo). Se añaden por TDD:
+  - `tarea crear --padre <ID>` / `tarea editar <ID> --padre <ID>`: escribe el
+    relacional detectado por `doctor` (`campos.subtarea`, `parent_id` estándar)
+    tras validar existencia y pertenencia al proyecto (**fail before write**).
+    `EDITABLES` **intacta** (decisión documentada §6.3: vínculo por argumento
+    dedicado, no por `--set`).
+  - `doctor` detecta el campo de subtareas en `fields_get` de `project.task` y
+    lo guarda en `config.json` → `campos.subtarea`.
+  - `tarea list --padre <ID>`: filtra solo las hijas de una tarea.
+  - `tarea get`: muestra el padre (`parent_id` con `[id, nombre]`).
+  - `resolver_padre()`: función de validación reutilizada por crear/editar;
+    error claro (exit 1) si el padre no existe o pertenece a otro proyecto.
+- Verificado: N1 **84/84** (13 tests nuevos en `TestSubtareas`); N2 2.23;
+  validación en Cognitia real (#15, Odoo 18): `doctor` detecta
+  `subtarea: "parent_id"`, la instancia expone `parent_id`/`child_ids`/`subtask_count`
+  y el proyecto no bloquea la jerarquía.
+- Docs actualizadas: SKILL.md (tabla + sección subtareas), ARQUITECTURA (tablas,
+  config.json ejemplo, decisión §6.3, nuevas filas en cobertura), README
+  (CLI, roadmap), ROADMAP Fase 14, INTEGRACION.md (caso 2.23).
+
 ## [1.0.0-rc6] — 2026-09-11
 
 ### Corregido

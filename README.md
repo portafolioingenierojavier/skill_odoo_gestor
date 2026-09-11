@@ -238,10 +238,10 @@ sequenceDiagram
 | Comando | Tipo | Confirmación | Exit |
 |---|---|---|:---:|
 | `now` | lectura local | — | `0` |
-| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config | `0 · 1` |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas, roles y campo de subtarea; escribe config | `0 · 1` |
 | `proyecto info` | lectura | datos, etapas y roles del proyecto | `0 · 1` |
 | `tarea get ID` · `tarea list` | lectura | — | `0 · 1` |
-| `tarea crear · editar · etapa · estado` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
+| `tarea crear · editar · etapa · estado` | **escritura** | dry-run → `--confirm`; `crear`/`editar` admiten `--padre ID` (subtarea real) | `2 · 0 · 1` |
 | `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
 | `horas registrar ID --horas X --nota "..."` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
 | `horas list ID` | lectura | líneas de timesheet de la tarea | `0 · 1` |
@@ -374,6 +374,9 @@ estado en 3 líneas y confirma qué tarea se retoma.
   roles de etapa autodetectados por el kanban (incluye fixes capturados en el
   estreno: `sequence=0` y columna «Rechazado» como cancelado) y autorización
   inicial de la skill — N1 **71/71** en verde
+- [x] **Ampliación aprobada (1.0.0-rc7): subtareas reales** — `tarea crear`/
+  `editar --padre ID` (jerarquía anidada en kanban), `doctor` detecta
+  `parent_id`, `tarea list --padre`; N1 **84/84** · validado en Cognitia
 - [ ] Fase 12 — **Estreno en el proyecto real + DoD global (G12)**: F12-T1
   completado en **Cognitia** (Odoo 18 remoto · proyecto #15 · `config.json` y
   roles reales · API key con vencimiento 2026-12-11 registrado) · F12-T2

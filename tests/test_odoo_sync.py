@@ -851,6 +851,138 @@ class TestHorasAjustar(unittest.TestCase):
         self.assertFalse(args.confirm)
 
 
+class TestSubtareas(unittest.TestCase):
+    """Ampliación aprobada: tareas hijas reales (parent_id) en Odoo."""
+
+    class FakeOdoo:
+        def __init__(self, padre_datos=None):
+            self.padre_datos = (padre_datos if padre_datos is not None
+                                else [{"name": "Iniciativa admin",
+                                       "project_id": [7, "Cognitia"]}])
+
+        def ejec(self, modelo, metodo, *args, **kwargs):
+            if metodo == "read" and args[0] == [42]:
+                return self.padre_datos[:1]
+            return []
+
+    def test_parser_crear_acepta_padre(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["tarea", "crear", "--nombre", "[FIX] Aprobar sin errores",
+             "--padre", "42"])
+        self.assertEqual(args.padre, 42)
+
+    def test_parser_crear_sin_padre_default_none(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["tarea", "crear", "--nombre", "[FIX] Algo"])
+        self.assertIsNone(args.padre)
+
+    def test_parser_editar_acepta_padre(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["tarea", "editar", "43", "--set", "description=x", "--padre", "42"])
+        self.assertEqual(args.padre, 42)
+
+    def test_parser_list_acepta_padre(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(["tarea", "list", "--padre", "42"])
+        self.assertEqual(args.padre, 42)
+
+    def test_deteccion_doctor_incluye_subtarea(self):
+        mod = cargar_modulo()
+        cfg = mod.construir_config(
+            7, {"asignacion": "user_ids", "planned_hours": True,
+                "state": True, "tickets": [], "subtarea": "parent_id"},
+            [], "timesheet")
+        self.assertEqual(cfg["campos"]["subtarea"], "parent_id")
+
+    def test_sin_campo_subtarea_detectado_es_none(self):
+        mod = cargar_modulo()
+        cfg = mod.construir_config(
+            7, {"asignacion": "user_ids", "planned_hours": False,
+                "state": False, "tickets": [], "subtarea": None},
+            [], "solo-registro")
+        self.assertIsNone(cfg["campos"].get("subtarea"))
+
+    def test_campos_tarea_sin_subtarea_lo_omite(self):
+        mod = cargar_modulo()
+        cfg = {"campos": {"asignacion": "user_ids", "planned_hours": False,
+                          "state": True, "tickets": []}}
+        self.assertNotIn("parent_id", mod.campos_tarea(cfg))
+
+    def test_campos_tarea_incluye_subtarea(self):
+        mod = cargar_modulo()
+        cfg = {"campos": {"asignacion": "user_ids", "planned_hours": False,
+                          "state": True, "tickets": [], "subtarea": "parent_id"}}
+        campos = mod.campos_tarea(cfg)
+        self.assertIn("parent_id", campos)
+
+    def test_whitelist_editables_no_incluye_padre(self):
+        mod = cargar_modulo()
+        self.assertNotIn("parent_id", mod.EDITABLES)
+
+    def test_campo_subtarea_sin_detectar_error(self):
+        mod = cargar_modulo()
+        captured = {}
+        original = mod.error
+
+        def fake_error(mensaje, detalle=""):
+            captured["mensaje"] = mensaje
+            raise SystemExit(1)
+        mod.error = fake_error
+        try:
+            with self.assertRaises(SystemExit):
+                mod.campo_subtarea({"campos": {"subtarea": None}})
+        finally:
+            mod.error = original
+        self.assertIn("doctor", captured["mensaje"])
+
+    def test_resolver_padre_valido_devuelve_campo_y_ficha(self):
+        mod = cargar_modulo()
+        cfg = {"proyecto_id": 7, "campos": {"subtarea": "parent_id"}}
+        campo, ficha = mod.resolver_padre(self.FakeOdoo(), cfg, 42)
+        self.assertEqual(campo, "parent_id")
+        self.assertEqual(ficha["id"], 42)
+        self.assertEqual(ficha["nombre"], "Iniciativa admin")
+
+    def test_resolver_padre_inexistente_error(self):
+        mod = cargar_modulo()
+        cfg = {"proyecto_id": 7, "campos": {"subtarea": "parent_id"}}
+        captured = {}
+        original = mod.error
+
+        def fake_error(mensaje, detalle=""):
+            captured["mensaje"] = mensaje
+            raise SystemExit(1)
+        mod.error = fake_error
+        try:
+            with self.assertRaises(SystemExit):
+                mod.resolver_padre(self.FakeOdoo([]), cfg, 42)
+        finally:
+            mod.error = original
+        self.assertIn("No existe la tarea padre 42", captured["mensaje"])
+
+    def test_resolver_padre_otro_proyecto_error(self):
+        mod = cargar_modulo()
+        cfg = {"proyecto_id": 7, "campos": {"subtarea": "parent_id"}}
+        odoo = self.FakeOdoo([{"name": "Padre ajeno", "project_id": [99, "Otro"]}])
+        captured = {}
+        original = mod.error
+
+        def fake_error(mensaje, detalle=""):
+            captured["mensaje"] = mensaje
+            raise SystemExit(1)
+        mod.error = fake_error
+        try:
+            with self.assertRaises(SystemExit):
+                mod.resolver_padre(odoo, cfg, 42)
+        finally:
+            mod.error = original
+        self.assertIn("99", captured["mensaje"])
+        self.assertIn("7", captured["mensaje"])
+
+
 class TestPlantillasCoherencia(unittest.TestCase):
     """F9-T2: coherencia plantillas ↔ parser ↔ SKILL.md."""
 

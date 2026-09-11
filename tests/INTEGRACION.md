@@ -56,6 +56,7 @@ Ejecutar: `python -m unittest tests/test_odoo_sync.py -v`
 | 2.20 | `horas ajustar 348 --horas 0.5` sin confirm | exit 2, propuesta `antes`/`despues` | La línea NO cambió | ✅ exit 2 |
 | 2.21 | ídem con `--confirm` | exit 0; línea en `actividad.log` | `horas list 62` refleja 0.5 | ✅ 0.5 h + log `horas ajustar` |
 | 2.22 | `doctor --proyecto 8` | `roles_detectados` con `inicio`/`fin`/`espera`/`cancelado` | `config.json.roles` == 1ª/última etapa real del kanban | ✅ `inicio` Backlog · `fin` Entregado · `cancelado` Cancelado |
+| 2.23 | `tarea crear --padre <ID> --nombre "[FEAT] Mejora" ` sin confirm → confirm · `tarea list --padre` · error padre inexistente | exit 2 con `padre` en propuesta; parent_id guardado; lista filtra hijas; exit 1 claro | Subtarea anidada en kanban · etapas/horas independientes | ✅ N1 84/84 🟢 |
 
 **Resultado F10:** 18/18 en verde — ejecutado con `.ia/` recreado desde cero
 (config, calibración y log borrados; `.env` conservado) y config regenerado
@@ -73,6 +74,17 @@ se adapta a las etapas de un proyecto?»), `doctor` asigna los roles de etapa po
 nombre las de `espera`/`cancelado`. Se guardan en `config.json` → `roles` y se
 ven en `proyecto info`. N1 68/68 🟢; 2.22 🟢: `inicio` Backlog · `fin` Entregado
 (la columna `Cancelado`, seq 7, se saltó) · `cancelado` Cancelado.
+
+**Subtareas reales (FASE 14, F14-T3):** por petición del usuario (Cognitia
+necesita iniciativas con mejoras hijas anidadas en el kanban), se añaden los
+argumentos `--padre ID` a `tarea crear` y `tarea editar`; `doctor` detecta el
+campo relacional (`campos.subtarea = parent_id`); `tarea list --padre` filtra
+hijas; `resolver_padre()` valida existencia y mismo proyecto antes de cualquier
+escritura (fail before write). Decisión documentada: `EDITABLES` intacta — el
+vínculo se hace por argumento dedicado, no por `--set`. N1 **84/84** 🟢 (13
+tests nuevos); 2.23 🟢. Validado en Cognitia real: `doctor` detecta
+`subtarea: "parent_id"` y la instancia expone `parent_id`/`child_ids`/`subtask_count`
+sin bloqueo de jerarquía.
 
 ## Nivel 3 — Comportamiento de la IA (Fase 11)
 
@@ -120,6 +132,7 @@ https://app.yafexsrl.com, DB `yafex`):
 | P3 | `doctor --proyecto 15` → etapas y roles reales | ✅ etapas: Nuevo(140) → En desarrollo(141) → Revisión(144) → Hecho(142) · Rechazado(143) · roles: `inicio` Nuevo · `fin` Hecho · `cancelado` Rechazado |
 | P4 | ⚠️ Bugs capturados por el estreno | 🔴→🟢 `sequence=0` en «Nuevo» invertía `inicio`/`fin`; «Rechazado» no era excepción terminal. Corregidos (N1 71/71), roles recalculados correctos |
 | P5 | `config.json` escrito y válido | ✅ UTF-8, roles correctos; `state` real con `cambios`/`aprobado` |
+| P6 | `doctor --proyecto 15` → `subtarea: parent_id` (FASE 14) | ✅ `parent_id`, `child_ids`, `subtask_count` presentes; jerarquía sin bloqueo |
 
 **Nota F12-T1.2 (mapeo ejecutivo):** en Cognitia la columna terminal es
 «Hecho»; «Rechazado» cumple el rol de cancelado y se registró así en

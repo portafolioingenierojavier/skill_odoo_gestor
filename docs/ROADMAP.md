@@ -598,8 +598,8 @@ skill, y si el usuario lo aprueba, usarla hasta que se diga lo contrario».
 1. En el repo del proyecto real: `mkdir .ia` + `.env` real (credenciales IA Sync) + entradas `.gitignore` (PAUTAS §5).
 2. `doctor --proyecto <REAL>` → revisar `config.json`: `doctor` ya autodetecta las **etapas reales** y los **roles** por orden de kanban (`roles.inicio`/`roles.fin`/`espera`/`cancelado`) — verificar que el mapeo es el correcto y, si la columna «final» real no es la última del kanban, corregir el rol a mano y documentarlo.
 3. Copiar `plantillas/FOCO.md` → `.ia/FOCO.md` con la tarea en curso.
-- [ ] Repo real preparado · config revisado · etapas: ______ (las reales)
-- [ ] `git status` del repo real limpio (sin locales)
+- [x] Repo real preparado · config revisado · etapas: Nuevo → En desarrollo → Revisión → Hecho → Rechazado
+- [x] `git status` del repo real limpio (commits 7597261 + 5323e7d en `dev`)
 
 ### F12-T2 · Primera sesión real
 Arrancar sesión Open Code en el repo real y verificar el arranque completo: `now` → FOCO → `calibracion stats --modelo <modelo>` → `actividad.log` → resumen de 3 líneas.
@@ -665,6 +665,32 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 
 ---
 
+## FASE 14 — Ampliación aprobada: subtareas reales (2026-09-11)
+
+A petición del usuario (propuesta `Cognitia/.ia/tmp/extension_odoo_sync_subtareas.md`):
+las iniciativas con mejoras hijas («Administradores: …») debían verse **anidadas
+de verdad** en el kanban, no solo por convención de nombres.
+
+### F14-T1 · `tarea crear/editar --padre ID` (subtarea real)
+- `resolver_padre()` valida **antes de escribir**: el padre existe y pertenece al proyecto del repo (fail before write, PAUTAS §4).
+- La propuesta de dry-run incluye el padre; `EDITABLES` **intacta** (decisión PAUTAS §6.3 documentada en ARQUITECTURA: vínculo por argumento dedicado `--padre`, no por `--set`).
+- `tarea editar ID --padre <ID>` permite reparentar con la misma validación.
+
+### F14-T2 · `doctor` detecta `campos.subtarea` + `tarea list --padre`
+- `doctor` anota `parent_id` cuando existe en `fields_get` de `project.task`.
+- `tarea list --padre <ID>` filtra solo las hijas; `tarea get` muestra el padre (`[id, nombre]`).
+- Validado en vivo en Cognitia (#15, Odoo 18.0-20260119): `subtarea: "parent_id"`
+  detectado; la instancia expone `parent_id`/`child_ids`/`subtask_count` y el
+  proyecto no bloquea la jerarquía → el kanban anidará las hijas.
+
+### F14-T3 · Tests y docs
+- N1: 13 tests nuevos de subtareas → **84/84 en verde** (parser, detección, validación de padre: existencia + mismo proyecto, whitelist intacta).
+- N2: caso nuevo **2.23** (ver `tests/INTEGRACION.md`).
+- CHANGELOG **1.0.0-rc7** · SKILL.md, ARQUITECTURA, README y este roadmap en el **mismo commit**.
+- Dependencias: 0 (solo stdlib) · sin cambio de formato de config (gana `campos.subtarea`; el parser tolera su ausencia).
+
+---
+
 ## §15. Mapa de cobertura total (la garantía de «nada sin cubrir»)
 
 **A. Requisitos del usuario (las 12 respuestas de diseño):**
@@ -701,7 +727,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 | 1.11 credenciales intocables | F0-T3, F3-T4 · G3, G8 (auditoría 5/5) |
 | 1.12 bug → test primero | Regla transversal §0 + F11-T3 |
 
-**C. Comandos del CLI (17/17):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5) · chatter post (F6) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 17/17 en G9 + ajuste pre-estreno.
+**C. Comandos del CLI (17/17):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5; `--padre` en crear/editar y `list --padre` por F14) · chatter post (F6) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 17/17 en G9 + ajuste pre-estreno + F14.
 
 **D. Protocolos de SKILL.md:** arranque (F11-T2 3.1) · guard (3.3) · dos fases (3.4) · anti-invención (3.5) · hora (3.2) · estimación con ratio (3.7) · desviación (3.8) · cierre completo (3.9) · manejo de fallos (3.10).
 
@@ -709,7 +735,7 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 
 **F. Definition of Done ARQUITECTURA §7.5:** G10 (nivel 2) + G12 (global, incluida validación del chatter con el superior).
 
-**G. Fuera de alcance (constancia explícita):** hoja de ruta futura de ARQUITECTURA §8 (digest semanal, sub-tareas, multi-proyecto, métricas cruzadas) — NO se desarrolla en este roadmap; cualquier inclusión pasa por fase nueva documentada (F13-T4).
+**G. Fuera de alcance (constancia explícita):** hoja de ruta futura de ARQUITECTURA §8 (digest semanal, sub-tareas *ya cubiertas en FASE 14*, multi-proyecto, métricas cruzadas) — NO se desarrolla en este roadmap; cualquier inclusión pasa por fase nueva documentada (F13-T4).
 
 ---
 
@@ -731,8 +757,9 @@ Tras las primeras 5–10 tareas reales: revisar ratios (`calibracion stats`), de
 | 11 N3 comportamiento | G11 | 2026-09-10 | 2h | 45m | ✅ |
 | 12 Estreno real + DoD global | G12 | | | | ⏳ |
 | 13 Post-estreno | G13 | | | | ⏳ |
+| 14 Subtareas reales (ampliación aprobada) | G14 | 2026-09-11 | 0h30 | 0h30 | ✅ |
 
-> **Estado final válido únicamente cuando las 14 filas estén ✅ con G12 en verde.**
+> **Estado final válido únicamente cuando las 15 filas estén ✅ con G12 en verde.**
 
 ---
 

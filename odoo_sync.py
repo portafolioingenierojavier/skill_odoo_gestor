@@ -198,7 +198,34 @@ def campos_tarea(cfg):
         campos.append("state")
     if c.get("asignacion"):
         campos.append(c["asignacion"])
+    if c.get("subtarea"):
+        campos.append(c["subtarea"])
     return campos
+
+
+def campo_subtarea(cfg):
+    """Nombre real del campo relacional padre→hija en esta instancia."""
+    campo = (cfg.get("campos") or {}).get("subtarea")
+    if not campo:
+        error("Esta instancia no expone el campo de subtareas (campos.subtarea). "
+              "Corre doctor en este proyecto para detectarlo.")
+    return campo
+
+
+def resolver_padre(odoo, cfg, padre):
+    """Valida la tarea padre (existe + mismo proyecto) y devuelve su ficha."""
+    campo = campo_subtarea(cfg)
+    datos = odoo.ejec("project.task", "read", [padre],
+                      fields=["name", "project_id"])
+    if not datos:
+        error(f"No existe la tarea padre {padre}: usa una tarea del proyecto "
+              f"{cfg['proyecto_id']} creada antes.")
+    padre_t = datos[0]
+    if padre_t["project_id"][0] != cfg["proyecto_id"]:
+        error(f"La tarea padre {padre} pertenece al proyecto "
+              f"{padre_t['project_id'][0]} y no a {cfg['proyecto_id']}: "
+              "una subtarea no puede saltar de proyecto.")
+    return campo, {"id": padre, "nombre": padre_t["name"]}
 
 
 def validar_convencion(nombre):
@@ -318,6 +345,7 @@ def cmd_doctor(args):
         "tickets": sorted(c for c in campos
                           if any(x in c.lower()
                                  for x in ("ticket", "helpdesk", "issue"))),
+        "subtarea": "parent_id" if "parent_id" in campos else None,
     }
     modulos = odoo.buscar("ir.module.module",
                           [["name", "in", ["hr_timesheet"]],
@@ -382,9 +410,15 @@ def cmd_tarea_list(args):
         if not cfg.get("estados"):
             error("Esta instancia no expone state: filtra por --etapa")
         dominio.append(["state", "=", ESTADOS[args.estado]])
+    if args.padre is not None:
+        hijo = campo_subtarea(cfg)
+        dominio.append([hijo, "=", args.padre])
     campos = ["id", "name", "stage_id"]
-    if cfg.get("campos", {}).get("state"):
+    c = cfg.get("campos", {})
+    if c.get("state"):
         campos.append("state")
+    if c.get("subtarea"):
+        campos.append(c["subtarea"])
     ok({"tareas": odoo.buscar("project.task", dominio, campos, limite=args.limite)})
 
 
@@ -404,7 +438,12 @@ def cmd_tarea_crear(args):
     advertencias = []
     if not validar_convencion(args.nombre):
         advertencias.append("El nombre no sigue la convención [TIPO] título")
-    propuesta = {"accion": "crear tarea", "valores": vals, "advertencias": advertencias}
+    padre = None
+    if args.padre is not None:
+        campo, padre = resolver_padre(odoo, cfg, args.padre)
+        vals[campo] = args.padre
+    propuesta = {"accion": "crear tarea", "valores": vals, "padre": padre,
+                 "advertencias": advertencias}
     if not args.confirm:
         dry_run(propuesta)
     nuevo = odoo.ejec("project.task", "create", [vals])
@@ -413,8 +452,11 @@ def cmd_tarea_crear(args):
 
 
 def cmd_tarea_editar(args):
-    odoo, _ = conexion_y_config()
+    odoo, cfg = conexion_y_config()
     pares = parsear_set(args.set)
+    if args.padre is not None:
+        campo, _ = resolver_padre(odoo, cfg, args.padre)
+        pares[campo] = args.padre
     actuales = odoo.ejec("project.task", "read", [args.id],
                          fields=sorted(pares))
     if not actuales:
@@ -689,16 +731,22 @@ def construir_parser():
     l = t.add_parser("list")
     l.add_argument("--etapa")
     l.add_argument("--estado", choices=list(ESTADOS))
+    l.add_argument("--padre", type=int,
+                   help="solo tareas hijas de esta (subtareas)")
     l.add_argument("--limite", type=int, default=50)
     c = t.add_parser("crear")
     c.add_argument("--nombre", required=True)
     c.add_argument("--descripcion")
     c.add_argument("--horas", type=float)
     c.add_argument("--etapa")
+    c.add_argument("--padre", type=int,
+                   help="ID de la tarea padre (crea una subtarea real)")
     c.add_argument("--confirm", action="store_true")
     e = t.add_parser("editar")
     e.add_argument("id", type=int)
     e.add_argument("--set", action="append", required=True, metavar="CAMPO=VALOR")
+    e.add_argument("--padre", type=int,
+                   help="ID de la nueva tarea padre (reparentar)")
     e.add_argument("--confirm", action="store_true")
     s = t.add_parser("etapa")
     s.add_argument("id", type=int)
