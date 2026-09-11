@@ -59,6 +59,7 @@ Ejecutar: `python -m unittest tests/test_odoo_sync.py -v`
 | 2.23 | `tarea crear --padre <ID> --nombre "[FEAT] Mejora" ` sin confirm → confirm · `tarea list --padre` · error padre inexistente | exit 2 con `padre` en propuesta; parent_id guardado; lista filtra hijas; exit 1 claro | Subtarea anidada en kanban · etapas/horas independientes | ✅ N1 84/84 🟢 |
 | 2.24 | `chatter post 61 --link https://…` sin confirm → confirm | exit 2 con `enlaces:[...]`; confirm → mensaje con `<a href>` clicable | URL visible como recurso en el chatter | 🧪 N1 101/101 🟢 · pendiente ejecución en vivo |
 | 2.25 | `chatter adjuntar 61 --archivo captura.png` sin confirm → confirm · error con .txt y con >20 MB | exit 2 con `archivos` (ruta/formato/mime/bytes); confirm → adjunto en chatter; exit 1 claro | Imagen subida + visible (recursos de la tarea) | 🧪 N1 101/101 🟢 · pendiente ejecución en vivo |
+| 2.26 | `tarea list 61` con `app.yafexsrl.com` cortado: `--robusto` (→ OK en un reconto) · `--reintentos 2` (agota → exit 1 claro) · `--reintentos ilimitado` sin `--tiempo-total` (error en arranque) → con `--tiempo-total 60` | stderr anuncia cada reintento; JSON final con `reintentos` (config/usados/duración); exit 1 tras agotar; error «ilimitados» si no hay limitante | La operación sobrevive a cortes breves de red sin duplicar escrituras | 🧪 N1 118/118 🟢 · autocrítico esperado: simular un corte de red local |
 
 **Resultado F10:** 18/18 en verde — ejecutado con `.ia/` recreado desde cero
 (config, calibración y log borrados; `.env` conservado) y config regenerado
@@ -97,6 +98,17 @@ escribe `ir.attachment` ligado a la tarea con whitelist fija. N1 **101/101** �
 (17 tests nuevos); 2.24/2.25 🧪 **pendiente de ejecución en vivo**: el host de
 Cognitia no respondió (timeout) al intentar el dry-run — se ejecutará en cuanto
 esté disponible.
+
+**Modo robusto (FASE 16, F16-T2):** por petición del usuario (conexión
+intermitente: «que no aborte al primer fallo, con límites configurables»).
+Todos los subcomandos aceptan `--robusto` (3 reintentos / espera 3 s),
+`--reintentos N|ilimitado`, `--tiempo-total SEG|ilimitado` y `--espera SEG`;
+`activar_modo_robusto` impone la condición de parada (**nunca** reintentos y
+tiempo total ilimitados a la vez). `intentar_con_reintentos` solo reintenta
+fallos de **conexión** (`CONEXION_ERRORES`), nunca un `xmlrpc.Fault` (rechazo
+lógico — no se duplican escrituras). Progreso por stderr y resumen `reintentos`
+en el JSON final. N1 **118/118** 🟢 (17 tests nuevos: `TestModoRobusto`);
+2.26 🧪 pendiente de ejecución con corte controlado.
 
 ## Nivel 3 — Comportamiento de la IA (Fase 11)
 

@@ -226,6 +226,12 @@ porque el ratio de desviación depende de quién estima.
 | `calibracion stats --modelo M` | local | ratios global y por tipo |
 | `raw --modelo M --domain JSON` | **solo lectura** | método prohibido → exit 1 |
 
+> **Opción robusta (FASE 16, rc9):** los 18 subcomandos aceptan
+> `--robusto` (3 reintentos / espera 3 s), `--reintentos N|ilimitado`,
+> `--tiempo-total SEG|ilimitado` y `--espera SEG`. Condición de parada
+> obligatoria: reintentos y tiempo total no pueden ser ilimitados a la vez
+> (error claro en arranque si se incumple).
+
 > **Ajuste de horas:** si te piden modificar horas de una tarea, ejecuta primero
 > `horas list ID`. Si tiene **más de un parte de horas**, muestra las líneas y
 > pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
@@ -251,6 +257,20 @@ porque el ratio de desviación depende de quién estima.
 - La IA **solo sugiere** adjuntar capturas cuando aportan (revisión visual,
   pruebas); conversa qué imágenes/dónde y las sube por la ruta que indique el
   usuario.
+
+**Modo robusto para conexión intermitente (FASE 16):** cuando la instancia
+cae o va lenta, no se aborta al primer fallo si se arma el modo: `PADRE_ROBUSTO`
+añade a cada subcomando hoja las opciones `--robusto`,
+`--reintentos N|ilimitado`, `--tiempo-total SEG|ilimitado` y `--espera SEG`.
+`activar_modo_robusto` valida en arranque la **condición de parada
+obligatoria**: reintentos totales y tiempo total nunca ambos ilimitados (la
+herramienta no corre sin un limitante claro). `intentar_con_reintentos`
+envuelve la conexión y cada `Odoo.ejec`, y solo reintenta **fallos de
+conexión** (`CONEXION_ERRORES`: ConnectionError, TimeoutError, socket.timeout,
+ProtocolError, OSError); un `xmlrpc.Fault` —rechazo lógico de Odoo— se propaga
+sin reintentar para no duplicar escrituras. El progreso de cada reintento sale
+por stderr, y cuando el modo está activo `ok()` añade al JSON un resumen
+`reintentos` (config, reintentos realizados y duración transcurrida).
 
 **Subtareas (tareas hijas reales):** en proyectos con iniciativas que agrupan
 mejoras (*Administradores: …*), `tarea crear --padre ID` escribe el relacional

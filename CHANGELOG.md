@@ -2,6 +2,33 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc9] — 2026-09-11
+
+### Añadido
+- **Modo robusto para conexión intermitente** (petición del usuario: la
+  conexión a la instancia cae o va lenta y no quiere abortar al primer fallo):
+  - Opciones en **todos** los subcomandos hoja (vía `PADRE_ROBUSTO`):
+    `--robusto` (atajo: 3 reintentos / espera 3 s / sin tope de tiempo),
+    `--reintentos N|ilimitado`, `--tiempo-total SEG|ilimitado` y
+    `--espera SEG`.
+  - **Condición de parada obligatoria** (`activar_modo_robusto` valida en
+    arranque): reintentos totales y tiempo total nunca ambos ilimitados —
+    sin un limitante claro la herramienta no arranca (error accionable).
+  - Solo se reintentan **fallos de conexión** (`CONEXION_ERRORES`:
+    ConnectionError, TimeoutError, socket.timeout, ProtocolError, OSError) via
+    `intentar_con_reintentos`, que envuelve la conexión y cada `Odoo.ejec`; un
+    `xmlrpc.Fault` (rechazo lógico) se propaga sin reintentar para no duplicar
+    escrituras.
+  - Feedback: cada reintento se anuncia por stderr y, si el modo está activo,
+    `ok()` añade al JSON el resumen `reintentos` (config inicial, reintentos
+    realizados, duración).
+- Verificado: N1 **118/118** en verde (17 tests nuevos en `TestModoRobusto`:
+  parser/coerciones, condición de parada, reintento hasta OK, agotamiento por
+  conteo y por presupuesto de tiempo, Fault no reintentado, resumen JSON) +
+  índice de SKILL.md en 18/18 (sin comandos nuevos). N2 caso 2.26 añadido.
+- Docs actualizadas: SKILL.md (sección «Modo robusto»), ARQUITECTURA (nota en
+  el índice y bloque narrativo), README, ROADMAP Fase 16, INTEGRACION.md.
+
 ## [1.0.0-rc8] — 2026-09-11
 
 ### Añadido

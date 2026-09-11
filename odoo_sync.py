@@ -19,7 +19,9 @@ import json
 import math
 import os
 import re
+import socket
 import sys
+import time
 import xmlrpc.client
 from pathlib import Path
 
@@ -50,6 +52,18 @@ ADJUNTOS_EDITABLES = ("name", "datas", "type", "res_model", "res_id", "mimetype"
 
 MAX_IMAGEN_BYTES = 20 * 1024 * 1024  # tope por archivo adjunto (xmlrpc práctico)
 
+DEFAULT_ESPERA = 3.0  # segundos entre reintentos del modo robusto
+
+# Modo robusto (conexión intermitente). `reintentos`/`tiempo_total` nunca ambos
+# "ilimitado": condición de parada obligatoria (al menos uno limitado).
+RETRY = {"activo": False, "reintentos": 3, "espera": DEFAULT_ESPERA,
+         "tiempo_total": None, "usados": 0, "inicio": None}
+
+# Solo se reintenta por fallos de CONEXIÓN; un `xmlrpc.client.Fault` (rechazo
+# lógico de Odoo) NO se reintenta (reintentar duplicaría escrituras).
+CONEXION_ERRORES = (ConnectionError, TimeoutError, socket.timeout,
+                    xmlrpc.client.ProtocolError, OSError)
+
 MIMES_IMAGEN = {
     "PNG": "image/png",
     "JPEG": "image/jpeg",
@@ -77,7 +91,10 @@ PATRON_ENTRADA = re.compile(
 # ------------------------------------------------------------------ utilidades
 
 def ok(data, codigo=0):
-    print(json.dumps({"ok": True, "data": data}, ensure_ascii=False))
+    salida = {"ok": True, "data": data}
+    if RETRY["activo"]:
+        salida["reintentos"] = resumen_reintentos()
+    print(json.dumps(salida, ensure_ascii=False))
     sys.exit(codigo)
 
 
@@ -92,6 +109,120 @@ def dry_run(propuesta):
                       "siguiente_paso": "Repite el comando con --confirm para aplicar"},
                      ensure_ascii=False))
     sys.exit(2)
+
+
+def coercion_reintentos(valor):
+    """--reintentos: entero >= 0 o 'ilimitado'."""
+    if valor == "ilimitado":
+        return "ilimitado"
+    try:
+        n = int(valor)
+    except (TypeError, ValueError):
+        error("--reintentos debe ser un entero >= 0 o 'ilimitado': " + str(valor))
+    if n < 0:
+        error("--reintentos debe ser un entero >= 0 o 'ilimitado': " + str(valor))
+    return n
+
+
+def coercion_tiempo_total(valor):
+    """--tiempo-total: segundos > 0 o 'ilimitado'."""
+    if valor == "ilimitado":
+        return "ilimitado"
+    try:
+        s = float(valor)
+    except (TypeError, ValueError):
+        error("--tiempo-total debe ser segundos > 0 o 'ilimitado': " + str(valor))
+    if not math.isfinite(s) or s <= 0:
+        error("--tiempo-total debe ser segundos > 0 o 'ilimitado': " + str(valor))
+    return s
+
+
+def coercion_espera(valor):
+    """--espera: segundos >= 0 entre reintentos."""
+    if valor is None:
+        return DEFAULT_ESPERA
+    try:
+        s = float(valor)
+    except (TypeError, ValueError):
+        error("--espera debe ser segundos >= 0: " + str(valor))
+    if not math.isfinite(s) or s < 0:
+        error("--espera debe ser segundos >= 0: " + str(valor))
+    return s
+
+
+def activar_modo_robusto(args):
+    """Configura el modo robusto; valida la condición de parada obligatoria."""
+    r = getattr(args, "reintentos", None)
+    t = getattr(args, "tiempo_total", None)
+    e = getattr(args, "espera", None)
+    robusto = bool(getattr(args, "robusto", False))
+    if not robusto and r is None and t is None and e is None:
+        return
+    reintentos = coercion_reintentos(r) if r is not None else 3
+    tiempo = coercion_tiempo_total(t) if t is not None else None
+    espera = coercion_espera(e)
+    if reintentos == "ilimitado" and tiempo is None:
+        error("Modo robusto inválido: reintentos y tiempo total no pueden ser "
+              "ilimitados a la vez (condición de parada obligatoria). Ej.: "
+              "--reintentos 5, o --reintentos ilimitado --tiempo-total 60.")
+    RETRY["activo"] = True
+    RETRY["reintentos"] = reintentos
+    RETRY["tiempo_total"] = tiempo
+    RETRY["espera"] = espera
+    RETRY["usados"] = 0
+    RETRY["inicio"] = dt.datetime.now()
+    print(f"[robusto] armado · reintentos={reintentos} · "
+          f"tiempo-total={tiempo if tiempo is not None else 'ilimitado'} · "
+          f"espera={espera}s", file=sys.stderr)
+
+
+def resumen_reintentos():
+    config = {"reintentos": ("ilimitado" if RETRY["reintentos"] is None
+                             else RETRY["reintentos"]),
+              "tiempo_total_seg": ("ilimitado" if RETRY["tiempo_total"] is None
+                                   else RETRY["tiempo_total"]),
+              "espera_seg": RETRY["espera"]}
+    duracion = None
+    if RETRY["inicio"] is not None:
+        duracion = round((dt.datetime.now() - RETRY["inicio"]).total_seconds(), 1)
+    return {"config": config, "reintentos_realizados": RETRY["usados"],
+            "duracion_seg": duracion}
+
+
+def intentar_con_reintentos(accion, descripcion):
+    """Ejecuta `accion` con reintentos por fallos de conexión.
+
+    Solo reintenta si RETRY está activo y solo ante CONEXION_ERRORES (los
+    rechazos lógicos de Odoo propagan). Feedback de progreso por stderr y
+    corte garantizado: retries agotados o presupuesto de tiempo consumido.
+    """
+    if not RETRY["activo"]:
+        try:
+            return accion()
+        except CONEXION_ERRORES as exc:
+            error(f"No se pudo {descripcion}: {exc}")
+    inicio = RETRY["inicio"] or dt.datetime.now()
+    while True:
+        try:
+            resultado = accion()
+            if RETRY["usados"]:
+                seg = round((dt.datetime.now() - inicio).total_seconds(), 1)
+                print(f"[robusto] {descripcion} completado tras "
+                      f"{RETRY['usados']} reintentos en {seg}s", file=sys.stderr)
+            return resultado
+        except CONEXION_ERRORES as exc:
+            RETRY["usados"] += 1
+            seg = (dt.datetime.now() - inicio).total_seconds()
+            sin_reintentos = (RETRY["reintentos"] != "ilimitado"
+                              and RETRY["usados"] > RETRY["reintentos"])
+            sin_tiempo = (RETRY["tiempo_total"] is not None
+                          and seg >= RETRY["tiempo_total"])
+            if sin_reintentos or sin_tiempo:
+                error(f"No se pudo {descripcion} tras {RETRY['usados']} "
+                      f"intento(s) en {round(seg, 1)}s: {exc}")
+            print(f"[robusto] reintento {RETRY['usados']} · {descripcion} · "
+                  f"espera {RETRY['espera']}s …", file=sys.stderr)
+            time.sleep(RETRY["espera"])
 
 
 def raiz_repo():
@@ -363,15 +494,16 @@ class Odoo:
         self.url = cred["ODOO_URL"].rstrip("/")
         self.db = cred["ODOO_DB"]
         self._key = cred["ODOO_API_KEY"]
-        try:
+
+        def conectar():
             self.common = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/common")
             info = self.common.version()
             self.version = info.get("server_version", "?")
             self.uid = self.common.authenticate(self.db, cred["ODOO_USER"],
                                                 self._key, {})
-        except Exception as exc:
-            error(f"No se pudo contactar con Odoo en {self.url}: {exc}")
-        if not self.uid:
+
+        intentar_con_reintentos(conectar, "contactar con Odoo")
+        if not getattr(self, "uid", None):
             error("Autenticación fallida: revisa ODOO_USER y ODOO_API_KEY")
         self.models = xmlrpc.client.ServerProxy(f"{self.url}/xmlrpc/2/object")
 
@@ -380,9 +512,12 @@ class Odoo:
         # args (fields=, attributes=, order=...); write/create reciben el dict
         # de valores como ARGUMENTO posicional. Por eso aquí no se tocan los
         # args: cada caller sabe qué forma usa.
-        try:
+        def llamar():
             return self.models.execute_kw(self.db, self.uid, self._key,
                                           modelo, metodo, list(args), kwargs)
+
+        try:
+            return intentar_con_reintentos(llamar, f"{modelo}.{metodo}")
         except xmlrpc.client.Fault as fault:
             error(f"Odoo rechazó {modelo}.{metodo}: "
                   f"{str(fault.faultString)[:300].strip()}")
@@ -836,6 +971,20 @@ def cmd_raw(args):
 
 # ------------------------------------------------------------------ entrada
 
+PADRE_ROBUSTO = argparse.ArgumentParser(add_help=False)
+PADRE_ROBUSTO.add_argument("--robusto", action="store_true",
+                           help="reintentos ante conexión intermitente "
+                                "(por defecto: 3 reintentos, espera 3s)")
+PADRE_ROBUSTO.add_argument("--reintentos", metavar="N|ilimitado",
+                           help="máximo de reintentos (ilimitado: sin tope de "
+                                "conteo; exige --tiempo-total)")
+PADRE_ROBUSTO.add_argument("--tiempo-total", metavar="SEG|ilimitado",
+                           help="presupuesto total en segundos (ilimitado: "
+                                "exige --reintentos)")
+PADRE_ROBUSTO.add_argument("--espera", metavar="SEG",
+                           help="segundos entre reintentos (por defecto 3)")
+
+
 def construir_parser():
     p = argparse.ArgumentParser(
         prog="odoo_sync.py",
@@ -843,26 +992,29 @@ def construir_parser():
                     "Salida JSON. Escrituras en dos fases: dry-run (exit 2) → --confirm.")
     sub = p.add_subparsers(dest="grupo", required=True)
 
-    sub.add_parser("now", help="Reloj exacto (única fuente de verdad del tiempo)")
+    sub.add_parser("now", help="Reloj exacto (única fuente de verdad del tiempo)",
+                   parents=[PADRE_ROBUSTO])
 
-    doc = sub.add_parser("doctor", help="Diagnóstico de conexión, campos y módulos")
+    doc = sub.add_parser("doctor", help="Diagnóstico de conexión, campos y módulos",
+                         parents=[PADRE_ROBUSTO])
     doc.add_argument("--proyecto", type=int,
                      help="ID del proyecto: además escribe .ia/config.json")
 
     pro = sub.add_parser("proyecto")
-    pro.add_subparsers(dest="accion", required=True).add_parser("info")
+    pro.add_subparsers(dest="accion", required=True).add_parser(
+        "info", parents=[PADRE_ROBUSTO])
 
     tar = sub.add_parser("tarea")
     t = tar.add_subparsers(dest="accion", required=True)
-    g = t.add_parser("get")
+    g = t.add_parser("get", parents=[PADRE_ROBUSTO])
     g.add_argument("id", type=int)
-    l = t.add_parser("list")
+    l = t.add_parser("list", parents=[PADRE_ROBUSTO])
     l.add_argument("--etapa")
     l.add_argument("--estado", choices=list(ESTADOS))
     l.add_argument("--padre", type=int,
                    help="solo tareas hijas de esta (subtareas)")
     l.add_argument("--limite", type=int, default=50)
-    c = t.add_parser("crear")
+    c = t.add_parser("crear", parents=[PADRE_ROBUSTO])
     c.add_argument("--nombre", required=True)
     c.add_argument("--descripcion")
     c.add_argument("--horas", type=float)
@@ -870,24 +1022,25 @@ def construir_parser():
     c.add_argument("--padre", type=int,
                    help="ID de la tarea padre (crea una subtarea real)")
     c.add_argument("--confirm", action="store_true")
-    e = t.add_parser("editar")
+    e = t.add_parser("editar", parents=[PADRE_ROBUSTO])
     e.add_argument("id", type=int)
     e.add_argument("--set", action="append", required=True, metavar="CAMPO=VALOR")
     e.add_argument("--padre", type=int,
                    help="ID de la nueva tarea padre (reparentar)")
     e.add_argument("--confirm", action="store_true")
-    s = t.add_parser("etapa")
+    s = t.add_parser("etapa", parents=[PADRE_ROBUSTO])
     s.add_argument("id", type=int)
     s.add_argument("--etapa", required=True)
     s.add_argument("--confirm", action="store_true")
-    st = t.add_parser("estado")
+    st = t.add_parser("estado", parents=[PADRE_ROBUSTO])
     st.add_argument("id", type=int)
     st.add_argument("--estado", required=True, choices=list(ESTADOS))
     st.add_argument("--confirm", action="store_true")
 
     cha = sub.add_parser("chatter")
     chsub = cha.add_subparsers(dest="accion", required=True)
-    ch = chsub.add_parser("post", help="Publica un mensaje en el chatter")
+    ch = chsub.add_parser("post", help="Publica un mensaje en el chatter",
+                          parents=[PADRE_ROBUSTO])
     ch.add_argument("id", type=int)
     ch.add_argument("--desde-archivo")
     ch.add_argument("--mensaje")
@@ -896,7 +1049,8 @@ def construir_parser():
                          "convierten también automáticamente")
     ch.add_argument("--confirm", action="store_true")
     adj = chsub.add_parser("adjuntar",
-                           help="Adjunta imágenes al chatter de la tarea")
+                           help="Adjunta imágenes al chatter de la tarea",
+                           parents=[PADRE_ROBUSTO])
     adj.add_argument("id", type=int)
     adj.add_argument("--archivo", action="append", required=True, metavar="RUTA",
                      help="imagen local (PNG/JPG/GIF/WEBP/BMP/SVG), repetible")
@@ -906,21 +1060,24 @@ def construir_parser():
 
     hor = sub.add_parser("horas")
     hs = hor.add_subparsers(dest="accion", required=True)
-    hr = hs.add_parser("registrar")
+    hr = hs.add_parser("registrar", parents=[PADRE_ROBUSTO])
     hr.add_argument("id", type=int)
     hr.add_argument("--horas", type=float, required=True)
     hr.add_argument("--nota")
     hr.add_argument("--confirm", action="store_true")
-    hl = hs.add_parser("list", help="Líneas de timesheet de una tarea (lectura)")
+    hl = hs.add_parser("list", help="Líneas de timesheet de una tarea (lectura)",
+                       parents=[PADRE_ROBUSTO])
     hl.add_argument("id", type=int)
-    ha = hs.add_parser("ajustar", help="Ajusta horas de una línea existente")
+    ha = hs.add_parser("ajustar", help="Ajusta horas de una línea existente",
+                       parents=[PADRE_ROBUSTO])
     ha.add_argument("id", type=int)
     ha.add_argument("--horas", type=float, required=True)
     ha.add_argument("--nota")
     ha.add_argument("--confirm", action="store_true")
 
     tic = sub.add_parser("ticket")
-    tv = tic.add_subparsers(dest="accion", required=True).add_parser("vincular")
+    tv = tic.add_subparsers(dest="accion", required=True).add_parser(
+        "vincular", parents=[PADRE_ROBUSTO])
     tv.add_argument("id", type=int)
     tv.add_argument("--ticket", type=int, required=True)
     tv.add_argument("--campo")
@@ -928,9 +1085,9 @@ def construir_parser():
 
     cal = sub.add_parser("calibracion")
     k = cal.add_subparsers(dest="accion", required=True)
-    ks = k.add_parser("stats")
+    ks = k.add_parser("stats", parents=[PADRE_ROBUSTO])
     ks.add_argument("--modelo", required=True)
-    kr = k.add_parser("registrar")
+    kr = k.add_parser("registrar", parents=[PADRE_ROBUSTO])
     kr.add_argument("--modelo", required=True)
     kr.add_argument("--tipo", required=True, choices=list(TIPOS_VALIDOS))
     kr.add_argument("--ref", required=True)
@@ -942,7 +1099,8 @@ def construir_parser():
     kr.add_argument("--interrupciones", action="store_true")
     kr.add_argument("--notas", help="texto o @archivo.md")
 
-    raw = sub.add_parser("raw", help="Consulta libre — SOLO lectura")
+    raw = sub.add_parser("raw", help="Consulta libre — SOLO lectura",
+                         parents=[PADRE_ROBUSTO])
     raw.add_argument("--modelo", required=True)
     raw.add_argument("--metodo", default="search_read")
     raw.add_argument("--campos", help="lista separada por comas")
@@ -955,6 +1113,7 @@ def construir_parser():
 
 def main():
     args = construir_parser().parse_args()
+    activar_modo_robusto(args)
     if args.grupo == "now":
         cmd_now(args)
     elif args.grupo == "doctor":

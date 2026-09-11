@@ -123,6 +123,11 @@ porque el ratio de desviación depende de quién estima.
 | `calibracion stats --modelo M` | local | ratios global y por tipo |
 | `raw --modelo M --domain JSON` | **solo lectura** | método prohibido → exit 1 |
 
+> **Modo robusto (FASE 16):** los 18 subcomandos admiten `--robusto`
+> (3 reintentos / espera 3 s), `--reintentos N|ilimitado`,
+> `--tiempo-total SEG|ilimitado` y `--espera SEG`. Nunca reintentos y tiempo
+> total ilimitados a la vez: la herramienta no corre sin limitante (error claro).
+
 > **Ajuste de horas:** si te piden modificar horas de una tarea, ejecuta primero
 > `horas list ID`. Si tiene **más de un parte de horas**, muestra las líneas y
 > pregunta al usuario cuál ajustar (nunca elijas por tu cuenta). Si hay una sola,
@@ -146,6 +151,23 @@ aunque el texto de la descripción no lo sea.
 3. Sube con `chatter adjuntar ID --archivo RUTA --archivo ... [--mensaje ...]`
    (dry-run → mostrar → `--confirm`). Solo imágenes
    (PNG, JPG, GIF, WEBP, BMP, SVG), cada archivo ≤ 20 MB.
+
+## Modo robusto (conexión intermitente)
+Cuando el host de Odoo tarda o cae, no te rindas al primer error: repite el
+comando con el modo robusto. La herramienta **solo reintenta fallos de
+conexión** (no los rechazos lógicos de Odoo, ante los que imprimes el error y
+listo). Dicta el límite de forma clara:
+- Corto en el tiempo: `--robusto` (por defecto: 3 reintentos, espera 3 s, sin
+  tope de duración).
+- Por duración total: `--robusto --reintentos ilimitado --tiempo-total 60`.
+- Por conteo: `--robusto --reintentos 5 --tiempo-total ilimitado` (o sin el
+  último, que ya queda limitado por los reintentos).
+- NUNCA `--reintentos ilimitado` sin `--tiempo-total` (ni a la inversa): sin un
+  limitante, la herramienta no arranca.
+Cada reintento se anuncia por consola (stderr) y el JSON final incluye el
+resumen `reintentos` (config, reintentos realizados, duración). Ejemplos reales
+de uso: repetir un `tarea crear --confirm`, un `chatter post --confirm` o un
+`chatter adjuntar --confirm` cuando la conexión se cortó.
 
 ## Subtareas (tareas hijas reales)
 Cuando un proyecto modela **iniciativas con mejoras hijas** (p. ej. *Administradores: …*),

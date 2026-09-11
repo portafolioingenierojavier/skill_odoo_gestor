@@ -724,6 +724,37 @@ pruebas o recurso extra).
 
 ---
 
+## FASE 16 — Ampliación aprobada: modo robusto para conexión intermitente (2026-09-11)
+
+La conexión a la instancia (Cognitia) puede caerse o ir lenta; en vez de
+abortar al primer fallo, la IA puede repetir la operación con límites claros.
+
+### F16-T1 · Modo robusto configurable en todo el CLI
+- Cualquier subcomando hoja acepta, vía `PADRE_ROBUSTO`:
+  - `--robusto` (atajo: 3 reintentos, espera 3 s, sin tiempo total).
+  - `--reintentos N|ilimitado` · `--tiempo-total SEG|ilimitado` ·
+    `--espera SEG` (por defecto 3 s).
+- **Condición de parada obligatoria**: reintentos y tiempo total no pueden ser
+  ilimitados a la vez; si faltan, la herramienta sale con error claro
+  (`activar_modo_robusto` valida en arranque).
+- Solo se reintentan **fallos de conexión** (`CONEXION_ERRORES`:
+  ConnectionError, TimeoutError, socket.timeout, ProtocolError, OSError); un
+  `xmlrpc.Fault` (rechazo lógico de Odoo) se propaga sin reintentar — evita
+  escrituras duplicadas (`intentar_con_reintentos` envuelve conectar y cada
+  `Odoo.ejec`).
+- Feedback: progreso del reintento por stderr y resumen final en el JSON
+  (`reintentos`: config, realizados, duración) cuando el modo está activo.
+
+### F16-T2 · Tests y docs
+- N1: **118/118** en verde (17 tests nuevos en `TestModoRobusto`: parser,
+  coerciones, condición de parada, reintento hasta OK, agotamiento de
+  reintentos y de presupuesto de tiempo, Fault no reintentado, resumen JSON)
+  + índice 18/18. N2: caso **2.26** en `tests/INTEGRACION.md`.
+- CHANGELOG **1.0.0-rc9** · SKILL.md, ARQUITECTURA, README y este roadmap en
+  el mismo commit.
+
+---
+
 ## §15. Mapa de cobertura total (la garantía de «nada sin cubrir»)
 
 **A. Requisitos del usuario (las 12 respuestas de diseño):**
@@ -760,7 +791,7 @@ pruebas o recurso extra).
 | 1.11 credenciales intocables | F0-T3, F3-T4 · G3, G8 (auditoría 5/5) |
 | 1.12 bug → test primero | Regla transversal §0 + F11-T3 |
 
-**C. Comandos del CLI (18/18):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5; `--padre` en crear/editar y `list --padre` por F14) · chatter post (F6; `--link` y URLs clicables por F15) · chatter adjuntar (**F15**) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 18/18 en G9 + ajuste pre-estreno + F14 + F15.
+**C. Comandos del CLI (18/18):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5; `--padre` en crear/editar y `list --padre` por F14) · chatter post (F6; `--link` y URLs clicables por F15) · chatter adjuntar (**F15**) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 18/18 en G9 + ajuste pre-estreno + F14 + F15. Todos los subcomandos admiten las opciones robustas `--robusto/--reintentos/--tiempo-total/--espera` (FASE 16, rc9), sin cambiar el conteo.
 
 **D. Protocolos de SKILL.md:** arranque (F11-T2 3.1) · guard (3.3) · dos fases (3.4) · anti-invención (3.5) · hora (3.2) · estimación con ratio (3.7) · desviación (3.8) · cierre completo (3.9) · manejo de fallos (3.10).
 
@@ -792,8 +823,9 @@ pruebas o recurso extra).
 | 13 Post-estreno | G13 | | | | ⏳ |
 | 14 Subtareas reales (ampliación aprobada) | G14 | 2026-09-11 | 0h30 | 0h30 | ✅ |
 | 15 Enlaces e imágenes en el chatter (ampliación aprobada) | G15 | 2026-09-11 | 0h30 | 0h30 | ✅ |
+| 16 Modo robusto (ampliación aprobada) | G16 | 2026-09-11 | 0h30 | 0h30 | ✅ |
 
-> **Estado final válido únicamente cuando las 16 filas estén ✅ con G12 en verde.**
+> **Estado final válido únicamente cuando las 17 filas estén ✅ con G12 en verde.**
 
 ---
 

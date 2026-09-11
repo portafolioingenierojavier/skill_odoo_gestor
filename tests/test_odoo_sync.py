@@ -5,13 +5,17 @@ Fase 2: utilidades locales (constantes, ok/error/dry_run, raiz_repo,
 cargar_credenciales, texto_o_archivo, registrar_actividad).
 Fase 3+: now, doctor y calibración se añaden en sus fases.
 """
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
+import xmlrpc.client
 from datetime import datetime
 from pathlib import Path
 
@@ -1111,7 +1115,168 @@ class TestEnlacesYAdjuntos(unittest.TestCase):
                           "type"])
 
 
-class TestPlantillasCoherencia(unittest.TestCase):
+class TestModoRobusto(unittest.TestCase):
+    """FASE 16 (rc9): reintentos configurables por conexión intermitente."""
+
+    def args(self, **kw):
+        base = dict(robusto=False, reintentos=None, tiempo_total=None,
+                    espera=None)
+        base.update(kw)
+        return types.SimpleNamespace(**base)
+
+    def test_parser_hoja_acepta_robusto(self):
+        mod = cargar_modulo()
+        for argv in (["tarea", "get", "61", "--robusto"],
+                     ["doctor", "--robusto"],
+                     ["raw", "--modelo", "project.task", "--robusto"]):
+            args = mod.construir_parser().parse_args(argv)
+            self.assertTrue(args.robusto, argv)
+
+    def test_parser_reintentos_ilimitado_y_tiempo(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["doctor", "--reintentos", "ilimitado", "--tiempo-total", "60",
+             "--espera", "2"])
+        self.assertEqual(args.reintentos, "ilimitado")
+        self.assertEqual(args.tiempo_total, "60")
+        self.assertEqual(args.espera, "2")
+
+    def test_coercion_reintentos_validos(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.coercion_reintentos("5"), 5)
+        self.assertEqual(mod.coercion_reintentos("0"), 0)
+        self.assertEqual(mod.coercion_reintentos("ilimitado"), "ilimitado")
+
+    def test_coercion_reintentos_invalidos(self):
+        mod = cargar_modulo()
+        for malo in ("-1", "abc", ""):
+            with self.subTest(malo=malo), self.assertRaises(SystemExit):
+                mod.coercion_reintentos(malo)
+
+    def test_coercion_tiempo_total_valido(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.coercion_tiempo_total("60"), 60.0)
+        self.assertEqual(mod.coercion_tiempo_total("ilimitado"), "ilimitado")
+
+    def test_coercion_tiempo_total_invalidos(self):
+        mod = cargar_modulo()
+        for malo in ("0", "-5", "abc"):
+            with self.subTest(malo=malo), self.assertRaises(SystemExit):
+                mod.coercion_tiempo_total(malo)
+
+    def test_coercion_espera(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.coercion_espera("1.5"), 1.5)
+        self.assertEqual(mod.coercion_espera(None), mod.DEFAULT_ESPERA)
+        with self.assertRaises(SystemExit):
+            mod.coercion_espera("-1")
+        with self.assertRaises(SystemExit):
+            mod.coercion_espera("abc")
+
+    def test_activa_con_reintentos_limitados(self):
+        mod = cargar_modulo()
+        mod.activar_modo_robusto(self.args(reintentos="5", espera="2"))
+        self.assertTrue(mod.RETRY["activo"])
+        self.assertEqual(mod.RETRY["reintentos"], 5)
+        self.assertIsNone(mod.RETRY["tiempo_total"])
+
+    def test_activa_con_tiempo_total_limita_por_defecto(self):
+        mod = cargar_modulo()
+        mod.activar_modo_robusto(self.args(tiempo_total="60"))
+        self.assertTrue(mod.RETRY["activo"])
+        self.assertEqual(mod.RETRY["tiempo_total"], 60.0)
+        self.assertEqual(mod.RETRY["reintentos"], 3)
+
+    def test_condicion_de_parada_obligatoria(self):
+        mod = cargar_modulo()
+        with contextlib.redirect_stdout(io.StringIO()) as salida:
+            with self.assertRaises(SystemExit):
+                mod.activar_modo_robusto(
+                    self.args(robusto=True, reintentos="ilimitado"))
+        self.assertIn("ilimitados", salida.getvalue())
+
+    def test_sin_flags_no_se_activa(self):
+        mod = cargar_modulo()
+        mod.activar_modo_robusto(self.args())
+        self.assertFalse(mod.RETRY["activo"])
+
+    def test_no_reintenta_sin_activo(self):
+        mod = cargar_modulo()
+        contador = {"n": 0}
+
+        def accion():
+            contador["n"] += 1
+            raise OSError("caida")
+
+        with self.assertRaises(SystemExit):
+            mod.intentar_con_reintentos(accion, "probar")
+        self.assertEqual(contador["n"], 1)
+        self.assertEqual(mod.RETRY["usados"], 0)
+
+    def test_reintenta_hasta_ok(self):
+        mod = cargar_modulo()
+        mod.RETRY.update(activo=True, reintentos=5, espera=0.0,
+                         tiempo_total=None, usados=0)
+        contador = {"n": 0}
+
+        def accion():
+            contador["n"] += 1
+            if contador["n"] < 3:
+                raise OSError("caida")
+            return 42
+
+        self.assertEqual(mod.intentar_con_reintentos(accion, "probar"), 42)
+        self.assertEqual(contador["n"], 3)
+        self.assertEqual(mod.RETRY["usados"], 2)
+
+    def test_agota_reintentos(self):
+        mod = cargar_modulo()
+        mod.RETRY.update(activo=True, reintentos=2, espera=0.0,
+                         tiempo_total=None, usados=0)
+
+        def accion():
+            raise OSError("caida")
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                mod.intentar_con_reintentos(accion, "probar")
+        self.assertEqual(mod.RETRY["usados"], 3)
+
+    def test_presupuesto_de_tiempo_agotado(self):
+        mod = cargar_modulo()
+        mod.RETRY.update(activo=True, reintentos="ilimitado", espera=0.0,
+                         tiempo_total=0.05, usados=0)
+
+        def accion():
+            raise OSError("caida")
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                mod.intentar_con_reintentos(accion, "probar")
+        self.assertGreaterEqual(mod.RETRY["usados"], 1)
+
+    def test_fault_logico_no_se_reintenta(self):
+        mod = cargar_modulo()
+        mod.RETRY.update(activo=True, reintentos=5, espera=0.0,
+                         tiempo_total=None, usados=0)
+
+        def accion():
+            raise xmlrpc.client.Fault("1", "rechazo logico")
+
+        with self.assertRaises(xmlrpc.client.Fault):
+            mod.intentar_con_reintentos(accion, "escribir")
+        self.assertEqual(mod.RETRY["usados"], 0)
+
+    def test_ok_incluye_resumen_robusto(self):
+        mod = cargar_modulo()
+        mod.RETRY.update(activo=True, reintentos=3, espera=3.0,
+                         tiempo_total=None, usados=2)
+        with contextlib.redirect_stdout(io.StringIO()) as salida:
+            with self.assertRaises(SystemExit):
+                mod.ok({"a": 1})
+        datos = json.loads(salida.getvalue())
+        self.assertEqual(datos["reintentos"]["reintentos_realizados"], 2)
+        self.assertEqual(datos["reintentos"]["config"]["reintentos"], 3)
     """F9-T2: coherencia plantillas ↔ parser ↔ SKILL.md."""
 
     RAIZ = AQUI.parent
