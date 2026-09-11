@@ -17,7 +17,7 @@
 
 [![estado](https://img.shields.io/badge/estado-en_desarrollo_activo-22C55E?style=for-the-badge)](#)
 [![dependencias](https://img.shields.io/badge/dependencias-0-22C55E?style=for-the-badge)](#)
-[![unit tests](https://img.shields.io/badge/unit_tests-nivel_1_%E2%9C%93-22C55E?style=for-the-badge)](#)
+[![unit tests](https://img.shields.io/badge/unit_tests-N1_71%2F71-22C55E?style=for-the-badge)](#)
 [![escrituras](https://img.shields.io/badge/escrituras-2_fases-7B2FBE?style=for-the-badge)](#)
 [![diseño](https://img.shields.io/badge/dise%C3%B1o-v1.0_aprobado-4CC9F0?style=for-the-badge)](#)
 
@@ -39,7 +39,7 @@
 - [✨ La solución](#-la-solución)
 - [🧭 Cómo funciona](#-cómo-funciona)
   - [El reparto de papeles](#el-reparto-de-papeles)
-  - [Las 7 reglas de oro](#las-7-reglas-de-oro)
+  - [Las 8 reglas de oro](#las-8-reglas-de-oro)
 - [🏗️ Arquitectura](#️-arquitectura)
 - [🛡️ Escrituras en dos fases](#️-escrituras-en-dos-fases)
 - [⌨️ Referencia del CLI](#️-referencia-del-cli)
@@ -67,9 +67,9 @@
 
 <div align="center">
 
-| 🔧 Dependencias | 🌉 Puentes a Odoo | 🛡️ Fases por escritura | 🧪 Niveles de prueba | ⌨️ Grupos de comandos |
+| 🔧 Dependencias | 🌉 Puentes a Odoo | 🛡️ Fases por escritura | 🧪 Niveles de prueba | ⌨️ Comandos |
 |:---:|:---:|:---:|:---:|:---:|
-| **0** · solo stdlib | **1** · `odoo_sync.py` | **2** · dry-run → `--confirm` | **3** · unit · integración · IA | **10** · tareas, chatter, horas… |
+| **0** · solo stdlib | **1** · `odoo_sync.py` | **2** · dry-run → `--confirm` | **3** · unit · integración · IA | **17** · en 10 grupos |
 
 </div>
 
@@ -113,7 +113,7 @@ cabe en una línea:
 | 🗂️ Repo / commits | Vista técnica (para el programador) |
 | 👤 Tú | **Única autoridad para aprobar escrituras** |
 
-### Las 7 reglas de oro
+### Las 8 reglas de oro
 
 1. La IA decide y redacta; **el script ejecuta, valida y es la fuente de verdad**.
 2. **1 repo = 1 proyecto Odoo** — guard anti-mezcla: la IA solo toca el proyecto de `.ia/config.json`.
@@ -122,6 +122,7 @@ cabe en una línea:
 5. **Anti-invención**: toda afirmación es trazable (archivos, commits, tests o dicho por ti). Sin dato → «no disponible».
 6. **Autónomo lo local, confirmado lo oficial**: FOCO y calibración se actualizan solos; todo lo que llega a Odoo se aprueba.
 7. **Fallos explícitos**: el error se reporta tal cual; jamás workarounds con RPC propio.
+8. **Autorización de uso**: la primera vez la IA pide tu OK antes de empezar a usar la skill, lo registra en `actividad.log` y la usa hasta que indiques lo contrario.
 
 <p align="center"><img src="docs/assets/divider.svg" width="800" alt=""/></p>
 
@@ -165,7 +166,7 @@ flowchart LR
 
 <repo>/                                          [POR PROYECTO]
 ├── .ia/
-│   ├── config.json     (V)      ← mapeo repo↔proyecto, campos, etapas, convención
+│   ├── config.json     (V)      ← mapeo repo↔proyecto, campos, etapas (roles), convención
 │   ├── .env            (L)      ← credenciales — NUNCA versionar
 │   ├── FOCO.md         (L)      ← foco actual de la IA
 │   ├── actividad.log   (L)      ← auditoría de toda escritura
@@ -232,7 +233,7 @@ sequenceDiagram
 ## ⌨️ Referencia del CLI
 
 <details open>
-<summary><b>Los 10 grupos de comandos de <code>odoo_sync.py</code></b></summary>
+<summary><b>Los 17 comandos de <code>odoo_sync.py</code> (10 grupos)</b></summary>
 
 | Comando | Tipo | Confirmación | Exit |
 |---|---|---|:---:|
@@ -346,7 +347,9 @@ conectar el proyecto real.
 
 ### 4 · Primer uso
 
-Abre Open Code en el repo. La IA ejecuta sola el checklist de arranque:
+Abre Open Code en el repo. La **primera vez**, la IA pide tu **autorización para
+usar la skill** (regla dura 8), la registra en `actividad.log` y desde entonces la
+usa hasta que indiques lo contrario. Luego ejecuta sola el checklist de arranque:
 `now` → lee FOCO → `calibracion stats` → últimas líneas del log → te resume el
 estado en 3 líneas y confirma qué tarea se retoma.
 
@@ -354,10 +357,10 @@ estado en 3 líneas y confirma qué tarea se retoma.
 
 ## 🗺️ Roadmap
 
-### v1.0 — diseño aprobado → implementación
+### v1.0 — implementación y estreno real
 
 - [x] Diseño de la arquitectura v1.0 (`ARQUITECTURA.md` como fuente única de verdad)
-- [x] `odoo_sync.py`: 10 grupos de comandos, whitelist, dos fases, JSON por stdout
+- [x] `odoo_sync.py`: 17 comandos en 10 grupos, whitelist, dos fases, JSON por stdout
 - [x] `SKILL.md`: reglas, arranque de sesión, ciclo de tarea, protocolo de tiempo
 - [x] Plantillas de FOCO y calibración
 - [x] Tests unitarios — nivel 1 sin Odoo (**50/50 en verde**)
@@ -367,9 +370,15 @@ estado en 3 líneas y confirma qué tarea se retoma.
   de seguridad 5/5, instalación por symlink, regresión total desde cero (N0 6/6 +
   N1 50/50 + N2 18/18) y nivel 3 de comportamiento de la IA (3.1–3.10 validados en
   el proyecto dummy `qa-dummy/`)
-- [ ] Fase 12 — **Estreno en el proyecto real + DoD global (G12)**: primera tarea
-  real end-to-end 9/9 y resumen validado a nivel ejecutivo ← **única etapa de
-  desarrollo pendiente**
+- [x] **Ajustes pre-estreno (1.0.0-rc3 → rc6)**: `horas list`/`horas ajustar`,
+  roles de etapa autodetectados por el kanban (incluye fixes capturados en el
+  estreno: `sequence=0` y columna «Rechazado» como cancelado) y autorización
+  inicial de la skill — N1 **71/71** en verde
+- [ ] Fase 12 — **Estreno en el proyecto real + DoD global (G12)**: F12-T1
+  completado en **Cognitia** (Odoo 18 remoto · proyecto #15 · `config.json` y
+  roles reales · API key con vencimiento 2026-12-11 registrado) · F12-T2
+  (primera sesión real end-to-end) en validación por el usuario ← **última etapa
+  de desarrollo pendiente**
 - [ ] Fase 13 — post-estreno: dogfooding y ajuste de calibración
 - [ ] Primera release etiquetada — `v1.0.0`
 
@@ -396,7 +405,7 @@ después se codea.
 ### Flujo
 
 1. Fork + rama con la convención del propio proyecto: `git checkout -b FEAT-42-modo-informe`
-2. Desarrolla respetando las 7 reglas de oro
+2. Desarrolla respetando las 8 reglas de oro
 3. Tests de nivel 1 en verde: `python3 -m unittest tests/test_odoo_sync.py -v`
 4. Si añades comandos al CLI → actualiza también `SKILL.md` y `tests/INTEGRACION.md`
 5. Abre el PR con título `[TIPO] resultado observable ≤ 70 caracteres`
