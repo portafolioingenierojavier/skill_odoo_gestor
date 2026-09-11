@@ -133,6 +133,50 @@ def coincidir_etapa(etapas, nombre):
     return None
 
 
+def _rol_de_nombre(nombre):
+    n = (nombre or "").strip().lower()
+    if not n:
+        return None
+    if "espera" in n:
+        return "espera"
+    if "cancelad" in n or "anulad" in n:
+        return "cancelado"
+    return None
+
+
+def asignar_roles(etapas):
+    """Roles de etapa sin depender de nombres exactos.
+
+    Posicional (orden de kanban por `sequence`, fallback a `id`):
+    primera etapa de trabajo → `inicio`, última → `fin`. Las etapas de
+    `espera`/`cancelado` (por texto del nombre) son excepciones y no se
+    asignan por posición: la columna `Cancelado` no puede ser `fin`.
+    """
+    vacio = {"inicio": None, "fin": None, "espera": None, "cancelado": None}
+    if not etapas:
+        return vacio
+    ordenadas = sorted(etapas, key=lambda e: (e.get("sequence") or e["id"],
+                                              e["id"]))
+    inicio = None
+    for e in ordenadas:
+        if e.get("name") and _rol_de_nombre(e["name"]) != "cancelado":
+            inicio = e["name"]
+            break
+    fin = None
+    for e in reversed(ordenadas):
+        if e.get("name") and _rol_de_nombre(e["name"]) != "cancelado":
+            fin = e["name"]
+            break
+    roles = {"inicio": inicio, "fin": fin, "espera": None, "cancelado": None}
+    for e in etapas:
+        nombre = _rol_de_nombre(e["name"])
+        if nombre == "espera":
+            roles["espera"] = e["name"]
+        elif nombre == "cancelado":
+            roles["cancelado"] = e["name"]
+    return roles
+
+
 def id_de_etapa(odoo, cfg, nombre):
     pid = cfg["proyecto_id"]
     etapas = odoo.buscar("project.task.type", [["project_ids", "in", [pid]]],
@@ -254,6 +298,7 @@ def construir_config(pid, deteccion, etapas, modo_horas):
             "campos": deteccion,
             "modo_horas": modo_horas,
             "etapas": {e["name"]: e["id"] for e in etapas},
+            "roles": asignar_roles(etapas),
             "estados": dict(ESTADOS) if deteccion["state"] else None,
             "umbral_desviacion_pct": UMBRAL_DESVIACION_PCT,
             "convencion": {"formato": "[TIPO] titulo ejecutivo",
@@ -288,6 +333,7 @@ def cmd_doctor(args):
                              [["project_ids", "in", [args.proyecto]]],
                              ["id", "name", "fold", "sequence"], orden="sequence")
         resultado["etapas_del_proyecto"] = etapas
+        resultado["roles_detectados"] = asignar_roles(etapas)
         cfg = construir_config(args.proyecto, deteccion, etapas, modo_horas)
         (carpeta_ia() / "config.json").write_text(
             json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -309,7 +355,7 @@ def cmd_proyecto_info(_):
                       fields=["name", "date_start", "date", "active"])[0]
     etapas = odoo.buscar("project.task.type", [["project_ids", "in", [pid]]],
                          ["id", "name", "fold", "sequence"], orden="sequence")
-    ok({"proyecto": datos, "etapas": etapas})
+    ok({"proyecto": datos, "etapas": etapas, "roles": cfg.get("roles")})
 
 
 def cmd_tarea_get(args):
@@ -350,6 +396,8 @@ def cmd_tarea_crear(args):
         vals["planned_hours"] = args.horas
     if args.etapa:
         vals["stage_id"] = id_de_etapa(odoo, cfg, args.etapa)["id"]
+    elif cfg.get("roles") and cfg["roles"].get("inicio"):
+        vals["stage_id"] = id_de_etapa(odoo, cfg, cfg["roles"]["inicio"])["id"]
     elif cfg.get("etapas"):
         vals["stage_id"] = next(iter(cfg["etapas"].values()))
     advertencias = []

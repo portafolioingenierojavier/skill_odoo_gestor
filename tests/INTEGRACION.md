@@ -55,6 +55,7 @@ Ejecutar: `python -m unittest tests/test_odoo_sync.py -v`
 | 2.19 | `horas list 62` | exit 0; `lineas` con id/horas/nota/fecha/empleado | Coincide con la hoja de horas | ✅ línea 348, 0.05 h, emp IA Sync |
 | 2.20 | `horas ajustar 348 --horas 0.5` sin confirm | exit 2, propuesta `antes`/`despues` | La línea NO cambió | ✅ exit 2 |
 | 2.21 | ídem con `--confirm` | exit 0; línea en `actividad.log` | `horas list 62` refleja 0.5 | ✅ 0.5 h + log `horas ajustar` |
+| 2.22 | `doctor --proyecto 8` | `roles_detectados` con `inicio`/`fin`/`espera`/`cancelado` | `config.json.roles` == 1ª/última etapa real del kanban | ✅ `inicio` Backlog · `fin` Entregado · `cancelado` Cancelado |
 
 **Resultado F10:** 18/18 en verde — ejecutado con `.ia/` recreado desde cero
 (config, calibración y log borrados; `.env` conservado) y config regenerado
@@ -64,6 +65,14 @@ con `doctor --proyecto 7`.
 usuario («ajusta las horas de la tarea X a 1 hora»). El CLI ahora tiene
 `horas list` (lectura) y `horas ajustar` (escritura, whitelist
 `name`/`unit_amount`, dry-run → `--confirm`). N1 58/58 y 2.19–2.21 en verde.
+
+**Autodetección de roles de etapa (2.22):** por petición del usuario («¿la skill
+se adapta a las etapas de un proyecto?»), `doctor` asigna los roles de etapa por
+**orden de kanban** (`sequence`, fallback `id`): primera etapa de trabajo =
+`inicio`, última = `fin` (salta columnas de cancelado/anulado), y por texto del
+nombre las de `espera`/`cancelado`. Se guardan en `config.json` → `roles` y se
+ven en `proyecto info`. N1 68/68 🟢; 2.22 🟢: `inicio` Backlog · `fin` Entregado
+(la columna `Cancelado`, seq 7, se saltó) · `cancelado` Cancelado.
 
 ## Nivel 3 — Comportamiento de la IA (Fase 11)
 

@@ -237,8 +237,8 @@ sequenceDiagram
 | Comando | Tipo | Confirmación | Exit |
 |---|---|---|:---:|
 | `now` | lectura local | — | `0` |
-| `doctor [--proyecto ID]` | diagnóstico | — *(escribe config local)* | `0 · 1` |
-| `proyecto info` | lectura | — | `0 · 1` |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config | `0 · 1` |
+| `proyecto info` | lectura | datos, etapas y roles del proyecto | `0 · 1` |
 | `tarea get ID` · `tarea list` | lectura | — | `0 · 1` |
 | `tarea crear · editar · etapa · estado` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |
 | `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | `2 · 0 · 1` |

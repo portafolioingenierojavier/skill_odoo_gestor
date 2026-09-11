@@ -569,13 +569,20 @@ Petición del usuario: «ajusta las horas de la tarea X a 1 hora». El CLI solo 
   `horas list` y pregunta al usuario (contrato en SKILL.md).
 - Verificado: N1 58/58 · N2 (2.19 `horas list` · 2.20/2.21 `horas ajustar`) · CHANGELOG 1.0.0-rc3.
 
+Segunda petición: «¿la skill se adapta a las etapas de un proyecto?». La skill ya
+operaba con las **etapas reales** (nombres), y ahora además **autodetecta sus
+roles** por orden de kanban: `doctor` guarda `inicio`/`fin`/`espera`/`cancelado`
+en `config.json` → `roles` (la columna de cancelado no puede ser `fin`).
+- `tarea crear` sin `--etapa` usa el rol `inicio` real.
+- Verificado: N1 68/68 · N2 2.22 (`doctor` roles) ⏳ en QA · CHANGELOG 1.0.0-rc4.
+
 ---
 
 ## FASE 12 — Estreno en el proyecto real (DoD global)
 
 ### F12-T1 · Preparar el repo real
 1. En el repo del proyecto real: `mkdir .ia` + `.env` real (credenciales IA Sync) + entradas `.gitignore` (PAUTAS §5).
-2. `doctor --proyecto <REAL>` → revisar `config.json`: **mapear las etapas reales del proyecto** contra el estándar (si difieren, ajustar el mapeo a mano con criterio ejecutivo y documentarlo).
+2. `doctor --proyecto <REAL>` → revisar `config.json`: `doctor` ya autodetecta las **etapas reales** y los **roles** por orden de kanban (`roles.inicio`/`roles.fin`/`espera`/`cancelado`) — verificar que el mapeo es el correcto y, si la columna «final» real no es la última del kanban, corregir el rol a mano y documentarlo.
 3. Copiar `plantillas/FOCO.md` → `.ia/FOCO.md` con la tarea en curso.
 - [ ] Repo real preparado · config revisado · etapas: ______ (las reales)
 - [ ] `git status` del repo real limpio (sin locales)

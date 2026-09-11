@@ -2,6 +2,26 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc4] — 2026-09-10
+
+### Añadido
+- **Autodetección de roles de etapa** (petición del usuario: «¿la skill se
+  adapta a las etapas de un proyecto?»). `doctor` ya operaba con las etapas
+  reales por nombre; ahora además asigna roles por **orden de kanban**:
+  - Función pura `asignar_roles()`: primera etapa de trabajo → `inicio`,
+    última → `fin` (salta columnas de cancelado/anulado por texto del nombre),
+    `espera`/`cancelado` por coincidencia de texto; `sequence` con fallback a
+    `id`; tolera nombres vacíos y listas vacías.
+  - `config.json` → `roles` (inicio/fin/espera/cancelado como *nombres* reales)
+    y `doctor` expone `roles_detectados`; `proyecto info` muestra `roles`.
+  - `tarea crear` sin `--etapa` usa el rol `inicio` real en lugar de asumir
+    «Backlog».
+- Contracto en SKILL.md/ARQUITECTURA: la «etapa final» real se lee de
+  `proyecto info` → `roles.fin`, no se asume por nombre estándar.
+- Verificado: N1 **68/68** en verde (10 tests nuevos: `TestAsignarRoles` +
+  roles en `construir_config`); N2 2.22 (`doctor` roles en QA) en `tests/
+  INTEGRACION.md`.
+
 ## [1.0.0-rc3] — 2026-09-10
 
 ### Añadido

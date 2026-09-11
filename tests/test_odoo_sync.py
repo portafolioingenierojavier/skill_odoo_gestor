@@ -320,6 +320,104 @@ class TestCoincidirEtapa(unittest.TestCase):
         self.assertIn("Revisión", captured["mensaje"])
 
 
+class TestAsignarRoles(unittest.TestCase):
+    """Pre-estreno: roles de etapa por orden de kanban + nombres excepción."""
+
+    def test_posicion_define_inicio_y_fin(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 30, "name": "QA", "sequence": 4},
+                  {"id": 40, "name": "Cancelado", "sequence": 6},
+                  {"id": 27, "name": "Gestionada", "sequence": 1}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "Gestionada")
+        self.assertEqual(roles["fin"], "QA")
+        self.assertEqual(roles["cancelado"], "Cancelado")
+
+    def test_nombres_de_excepcion_por_texto(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 27, "name": "Backlog", "sequence": 1},
+                  {"id": 33, "name": "En espera", "sequence": 3},
+                  {"id": 31, "name": "Entregado", "sequence": 5},
+                  {"id": 40, "name": "Cancelada", "sequence": 6}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "Backlog")
+        self.assertEqual(roles["fin"], "Entregado")
+        self.assertEqual(roles["espera"], "En espera")
+        self.assertEqual(roles["cancelado"], "Cancelada")
+
+    def test_numero_desordenado_usa_sequence(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 10, "name": "C", "sequence": 9},
+                  {"id": 20, "name": "A", "sequence": 1},
+                  {"id": 30, "name": "B", "sequence": 5}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "A")
+        self.assertEqual(roles["fin"], "C")
+
+    def test_sin_sequence_fallback_por_id(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 40, "name": "Fin"}, {"id": 10, "name": "Ini"}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "Ini")
+        self.assertEqual(roles["fin"], "Fin")
+
+    def test_una_sola_etapa_inicio_y_fin(self):
+        mod = cargar_modulo()
+        roles = mod.asignar_roles([{"id": 27, "name": "Unica", "sequence": 1}])
+        self.assertEqual(roles["inicio"], "Unica")
+        self.assertEqual(roles["fin"], "Unica")
+
+    def test_vacia_devuelve_none(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.asignar_roles([]),
+                         {"inicio": None, "fin": None,
+                          "espera": None, "cancelado": None})
+
+    def test_nombre_vacio_se_tolera(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 27, "name": None, "sequence": 1},
+                  {"id": 31, "name": "", "sequence": 2}]
+        roles = mod.asignar_roles(etapas)
+        self.assertIsNone(roles["espera"])
+        self.assertIsNone(roles["cancelado"])
+        self.assertIsNone(roles["inicio"])
+        self.assertIsNone(roles["fin"])
+
+    def test_fin_salta_la_columna_cancelado(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 27, "name": "Entrada", "sequence": 1},
+                  {"id": 31, "name": "En espera", "sequence": 2},
+                  {"id": 33, "name": "Entregado", "sequence": 3},
+                  {"id": 40, "name": "Anulado", "sequence": 4}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "Entrada")
+        self.assertEqual(roles["fin"], "Entregado")
+        self.assertEqual(roles["espera"], "En espera")
+        self.assertEqual(roles["cancelado"], "Anulado")
+
+    def test_cancelado_primera_columna_no_es_inicio(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 40, "name": "Cancelado", "sequence": 1},
+                  {"id": 27, "name": "Nuevo", "sequence": 2},
+                  {"id": 31, "name": "Hecho", "sequence": 3}]
+        roles = mod.asignar_roles(etapas)
+        self.assertEqual(roles["inicio"], "Nuevo")
+        self.assertEqual(roles["fin"], "Hecho")
+
+    def test_config_incluye_roles(self):
+        mod = cargar_modulo()
+        etapas = [{"id": 27, "name": "Backlog", "sequence": 1},
+                  {"id": 31, "name": "Entregado", "sequence": 5},
+                  {"id": 40, "name": "Cancelado", "sequence": 6}]
+        cfg = mod.construir_config(7,
+                                   {"asignacion": "user_ids", "planned_hours": True,
+                                    "state": True, "tickets": []},
+                                   etapas, "timesheet")
+        self.assertEqual(cfg["roles"]["inicio"], "Backlog")
+        self.assertEqual(cfg["roles"]["fin"], "Entregado")
+        self.assertEqual(cfg["roles"]["cancelado"], "Cancelado")
+
+
 class TestCamposTarea(unittest.TestCase):
     """F4-T1: campos_tarea()."""
 

@@ -35,14 +35,21 @@ description: Gestión del proyecto Odoo vinculado a este repo — tareas, etapas
 ## Ciclo de una tarea (etapas y criterios de transición)
 | Etapa | Sales a la siguiente cuando... |
 |---|---|
-| Backlog | Se decide trabajarla |
+| Backlog (inicio) | Se decide trabajarla |
 | Especificaciones | Spec escrita y confirmada por el usuario |
 | En desarrollo | Código auto-revisado y tests locales ejecutados |
 | En pruebas | Tests pasan (si fallan → volver a En desarrollo con nota) |
 | Revisión | El usuario valida (si pide cambios → En desarrollo) |
-| Entregado | — (terminal, solo con OK explícito) |
+| Entregado (fin) | — (terminal, solo con OK explícito) |
 Excepciones: `tarea estado --estado espera` para bloqueos (con motivo en chatter);
 `cancelado` solo lo decide el usuario, con justificación.
+
+**Roles de etapa:** `doctor` guarda en `.ia/config.json` → `roles` los nombres reales
+que cumplen cada rol por **orden de kanban**: primera etapa de trabajo = `inicio`,
+última = `fin` (la columna de cancelado/anulado se salta), y por nombre las de
+`espera`/`cancelado`. Usa estos roles cuando el proyecto no siga los nombres
+estándar: la «etapa final» real la verás en `proyecto info` → `roles.fin`, no la
+asumas por el nombre.
 
 ## Protocolo de tiempo (por tarea)
 1. Al empezar: `now` → anotar timestamp exacto en FOCO + estimación
@@ -91,8 +98,8 @@ porque el ratio de desviación depende de quién estima.
 | Comando | Tipo | Notas |
 |---|---|---|
 | `now` | local | reloj exacto |
-| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas; escribe config |
-| `proyecto info` | lectura | datos y etapas del proyecto |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config |
+| `proyecto info` | lectura | datos, etapas y roles del proyecto |
 | `tarea get ID` | lectura | campos según config + chatter |
 | `tarea list` | lectura | filtros `--etapa --estado --limite` |
 | `tarea crear --nombre ...` | escritura | dry-run → `--confirm` |

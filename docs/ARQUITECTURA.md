@@ -139,14 +139,20 @@ description: Gestión del proyecto Odoo vinculado a este repo — tareas, etapas
 ## Ciclo de una tarea (etapas y criterios de transición)
 | Etapa | Sales a la siguiente cuando... |
 |---|---|
-| Backlog | Se decide trabajarla |
+| Backlog (inicio) | Se decide trabajarla |
 | Especificaciones | Spec escrita y confirmada por el usuario |
 | En desarrollo | Código auto-revisado y tests locales ejecutados |
 | En pruebas | Tests pasan (si fallan → volver a En desarrollo con nota) |
 | Revisión | El usuario valida (si pide cambios → En desarrollo) |
-| Entregado | — (terminal, solo con OK explícito) |
+| Entregado (fin) | — (terminal, solo con OK explícito) |
 Excepciones: `tarea estado --estado espera` para bloqueos (con motivo en chatter);
 `cancelado` solo lo decide el usuario, con justificación.
+
+**Roles de etapa:** `doctor` guarda en `.ia/config.json` → `roles` los nombres
+reales por **orden de kanban** (`sequence`, fallback `id`): primera etapa de
+trabajo = `inicio`, última = `fin` (salta la columna de cancelado/anulado); las de
+`espera`/`cancelado` por texto del nombre. La «etapa final» real se lee de
+`proyecto info` → `roles.fin`, sin asumir el nombre estándar.
 
 ## Protocolo de tiempo (por tarea)
 1. Al empezar: `now` → anotar timestamp exacto en FOCO + estimación
@@ -195,8 +201,8 @@ porque el ratio de desviación depende de quién estima.
 | Comando | Tipo | Notas |
 |---|---|---|
 | `now` | local | reloj exacto |
-| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas; escribe config |
-| `proyecto info` | lectura | datos y etapas del proyecto |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config |
+| `proyecto info` | lectura | datos, etapas y roles del proyecto |
 | `tarea get ID` | lectura | campos según config + chatter |
 | `tarea list` | lectura | filtros `--etapa --estado --limite` |
 | `tarea crear --nombre ...` | escritura | dry-run → `--confirm` |
@@ -885,6 +891,7 @@ Razón de ser: cabecera estándar del archivo por modelo. La crea el primer `cal
 | Razón de ser | Cada instancia es custom: el script necesita saber qué campos/etapas reales usar |
 | Lo crea | `doctor --proyecto <ID>` (borrador) + revisión del usuario |
 | Se actualiza | Al cambiar etapas en Odoo (re-correr doctor) o al confirmar el campo de tickets |
+| Roles de etapa | `doctor` asigna `inicio`/`fin` por orden de kanban (`sequence`, fallback `id`), saltando la columna de cancelado; `espera`/`cancelado` por texto del nombre. Así la IA sabe qué etapa es la «final» aun con nombres no estándar |
 
 ```json
 {
@@ -895,6 +902,8 @@ Razón de ser: cabecera estándar del archivo por modelo. La crea el primer `cal
   "modo_horas": "timesheet",
   "etapas": {"Backlog": 10, "Especificaciones": 11, "En desarrollo": 12,
              "En pruebas": 13, "Revisión": 14, "Entregado": 15},
+  "roles": {"inicio": "Backlog", "fin": "Entregado",
+            "espera": null, "cancelado": null},
   "estados": {"en-progreso": "01_in_progress", "espera": "04_waiting_normal",
               "hecho": "1_done", "cancelado": "1_canceled"},
   "umbral_desviacion_pct": 25,
@@ -953,8 +962,8 @@ Instancias generadas desde plantillas. La calibración es **un archivo por model
 | Comando | Tipo | Confirmación | Exit esperados |
 |---|---|---|---|
 | `now` | lectura local | — | 0 |
-| `doctor [--proyecto ID]` | diagnóstico | — (escribe config local) | 0, 1 |
-| `proyecto info` | lectura | — | 0, 1 |
+| `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas y roles; escribe config | 0, 1 |
+| `proyecto info` | lectura | datos, etapas y roles del proyecto | 0, 1 |
 | `tarea get ID` · `tarea list` | lectura | — | 0, 1 |
 | `tarea crear` · `editar` · `etapa` · `estado` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
 | `chatter post ID --desde-archivo f.md` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |
@@ -1153,6 +1162,7 @@ if __name__ == "__main__":
 | 2.19 | `horas list <id>` | exit 0; `lineas` con id/horas/nota/fecha/empleado | Coincide con la hoja de horas de la tarea |
 | 2.20 | `horas ajustar <línea> --horas X` sin confirm | exit 2, propuesta con `antes`/`despues` | La línea NO cambió |
 | 2.21 | ídem con `--confirm` | exit 0; línea en `actividad.log` | `horas list` refleja el nuevo valor |
+| 2.22 | `doctor --proyecto <QA>` | `roles` con `inicio`/`fin`/`espera`/`cancelado` por orden de kanban | `config.json.roles` == etapa 1ª y última reales del proyecto |
 
 ### 7.4 Nivel 3 — Comportamiento de la IA (la IA también es una herramienta a validar)
 
