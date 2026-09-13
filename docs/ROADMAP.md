@@ -755,6 +755,37 @@ abortar al primer fallo, la IA puede repetir la operación con límites claros.
 
 ---
 
+## FASE 17 — Ampliación aprobada: fechar tareas y partes de horas (2026-09-11)
+
+Traída desde el proyecto **Contratos B2B (#16)** de Odoo18-Server03, donde se
+trabajó con IA un día y el trabajo debía reflejarse con la **fecha real** (no
+hoy). Propuesta: `extension_odoo_sync_fecha.md`.
+
+### F17-T1 · `--fecha YYYY-MM-DD` retrocompatible
+- `tarea crear --fecha` → `date_deadline`; `horas registrar --fecha` → `date`
+  de `account.analytic.line`. Sin `--fecha` comportamiento actual intacto.
+- `validar_fecha_iso` valida ISO + calendario real **antes de contactar con
+  Odoo** (fail-fast): `2026-02-30`, `2026-13-01`, `2026/09/11`, etc. → error
+  claro sin intentar conexión.
+- No-alcance explícito (igual que la propuesta): NO retro-fechar `create_date`
+  de `project.task` (el ORM de Odoo no lo permite; contablemente incorrecto).
+  Decisión de diseño: `--fecha` fija `date_deadline`, el único campo de fecha
+  editable de la tarea.
+- Decisión de alcance tomada con el usuario: **solo** `tarea crear` y
+  `horas registrar` (no `editar` ni `horas ajustar`); validación ISO +
+  calendario **sin tope** de pasado/futuro.
+
+### F17-T2 · Tests y docs
+- N1: **123/123** en verde (10 tests nuevos en `TestFecha`: parser,
+  `validar_fecha_iso` válidas/inválidas, `cmd_tarea_crear`/
+  `cmd_horas` con y sin `--fecha` verificando los `vals` escritos, error claro
+  de fecha inválida — validado con `_FakeOdoo`, sin red) + índice 18/18
+  (sin comandos nuevos). N2: caso **2.27** en `tests/INTEGRACION.md`.
+- CHANGELOG **1.0.0-rc10** · SKILL.md, ARQUITECTURA, README y este roadmap en
+  el mismo commit.
+
+---
+
 ## §15. Mapa de cobertura total (la garantía de «nada sin cubrir»)
 
 **A. Requisitos del usuario (las 12 respuestas de diseño):**
@@ -791,7 +822,7 @@ abortar al primer fallo, la IA puede repetir la operación con límites claros.
 | 1.11 credenciales intocables | F0-T3, F3-T4 · G3, G8 (auditoría 5/5) |
 | 1.12 bug → test primero | Regla transversal §0 + F11-T3 |
 
-**C. Comandos del CLI (18/18):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5; `--padre` en crear/editar y `list --padre` por F14) · chatter post (F6; `--link` y URLs clicables por F15) · chatter adjuntar (**F15**) · horas registrar (F6) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 18/18 en G9 + ajuste pre-estreno + F14 + F15. Todos los subcomandos admiten las opciones robustas `--robusto/--reintentos/--tiempo-total/--espera` (FASE 16, rc9), sin cambiar el conteo.
+**C. Comandos del CLI (18/18):** now (F3) · doctor (F3) · proyecto info (F4) · tarea get/list (F4) · tarea crear/editar/etapa/estado (F5; `--padre` en crear/editar y `list --padre` por F14; `--fecha` en crear por F17) · chatter post (F6; `--link` y URLs clicables por F15) · chatter adjuntar (**F15**) · horas registrar (F6; `--fecha` por F17) · horas list/ajustar (ajuste pre-estreno) · ticket vincular (F6) · calibracion stats/registrar (F7) · raw (F8). Documentados 18/18 en G9 + ajuste pre-estreno + F14 + F15 + F17. Todos los subcomandos admiten las opciones robustas `--robusto/--reintentos/--tiempo-total/--espera` (FASE 16, rc9), sin cambiar el conteo.
 
 **D. Protocolos de SKILL.md:** arranque (F11-T2 3.1) · guard (3.3) · dos fases (3.4) · anti-invención (3.5) · hora (3.2) · estimación con ratio (3.7) · desviación (3.8) · cierre completo (3.9) · manejo de fallos (3.10).
 
@@ -824,8 +855,9 @@ abortar al primer fallo, la IA puede repetir la operación con límites claros.
 | 14 Subtareas reales (ampliación aprobada) | G14 | 2026-09-11 | 0h30 | 0h30 | ✅ |
 | 15 Enlaces e imágenes en el chatter (ampliación aprobada) | G15 | 2026-09-11 | 0h30 | 0h30 | ✅ |
 | 16 Modo robusto (ampliación aprobada) | G16 | 2026-09-11 | 0h30 | 0h30 | ✅ |
+| 17 Fechar tareas y partes de horas (ampliación aprobada) | G17 | 2026-09-11 | 0h30 | 0h30 | ✅ |
 
-> **Estado final válido únicamente cuando las 17 filas estén ✅ con G12 en verde.**
+> **Estado final válido únicamente cuando las 18 filas estén ✅ con G12 en verde.**
 
 ---
 

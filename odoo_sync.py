@@ -426,6 +426,22 @@ def validar_enlace(url):
     return url
 
 
+def validar_fecha_iso(valor):
+    """Valida y normaliza una fecha ISO YYYY-MM-DD real de calendario."""
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", valor) or not _es_fecha_calendario(valor):
+        error(f"--fecha debe ser una fecha válida en formato ISO YYYY-MM-DD "
+              f"(ej. 2026-09-11), no '{valor}'")
+    return valor
+
+
+def _es_fecha_calendario(valor):
+    try:
+        dt.date.fromisoformat(valor)
+        return True
+    except ValueError:
+        return False
+
+
 def conversion_links_html(texto):
     """Convierte URLs sueltas en enlaces clicables, sin tocar anclas existentes."""
     anclas = []
@@ -642,12 +658,16 @@ def cmd_tarea_list(args):
 
 
 def cmd_tarea_crear(args):
+    fecha = (validar_fecha_iso(args.fecha)
+             if getattr(args, "fecha", None) else None)
     odoo, cfg = conexion_y_config()
     vals = {"name": args.nombre, "project_id": cfg["proyecto_id"]}
     if args.descripcion:
         vals["description"] = texto_o_archivo(args.descripcion)
     if args.horas is not None:
         vals["planned_hours"] = args.horas
+    if fecha:
+        vals["date_deadline"] = fecha
     if args.etapa:
         vals["stage_id"] = id_de_etapa(odoo, cfg, args.etapa)["id"]
     elif cfg.get("roles") and cfg["roles"].get("inicio"):
@@ -833,6 +853,8 @@ def cmd_cal_registrar(args):
 
 
 def cmd_horas(args):
+    fecha = (validar_fecha_iso(args.fecha)
+             if getattr(args, "fecha", None) else None)
     odoo, cfg = conexion_y_config()
     if cfg.get("modo_horas") != "timesheet":
         error("hr_timesheet no instalado (modo «solo-registro»): registra las "
@@ -845,6 +867,8 @@ def cmd_horas(args):
     vals = {"name": args.nota or "Trabajo de la IA",
             "project_id": cfg["proyecto_id"], "task_id": args.id,
             "unit_amount": args.horas, "employee_id": empleados[0]["id"]}
+    if fecha:
+        vals["date"] = fecha
     propuesta = {"accion": "registrar horas (timesheet)", "tarea": f"#{args.id}",
                  "vals": vals}
     if not args.confirm:
@@ -1018,6 +1042,8 @@ def construir_parser():
     c.add_argument("--nombre", required=True)
     c.add_argument("--descripcion")
     c.add_argument("--horas", type=float)
+    c.add_argument("--fecha", metavar="YYYY-MM-DD",
+                   help="date_deadline con esa fecha (ISO); sin él, hoy")
     c.add_argument("--etapa")
     c.add_argument("--padre", type=int,
                    help="ID de la tarea padre (crea una subtarea real)")
@@ -1064,6 +1090,9 @@ def construir_parser():
     hr.add_argument("id", type=int)
     hr.add_argument("--horas", type=float, required=True)
     hr.add_argument("--nota")
+    hr.add_argument("--fecha", metavar="YYYY-MM-DD",
+                   help="date de la línea de timesheet con esa fecha (ISO); "
+                        "sin él, hoy")
     hr.add_argument("--confirm", action="store_true")
     hl = hs.add_parser("list", help="Líneas de timesheet de una tarea (lectura)",
                        parents=[PADRE_ROBUSTO])

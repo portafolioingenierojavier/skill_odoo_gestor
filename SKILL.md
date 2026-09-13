@@ -109,13 +109,13 @@ porque el ratio de desviación depende de quién estima.
 | `proyecto info` | lectura | datos, etapas y roles del proyecto |
 | `tarea get ID` | lectura | campos según config + chatter |
 | `tarea list` | lectura | filtros `--etapa --estado --padre --limite` |
-| `tarea crear --nombre ... [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` crea subtarea real |
+| `tarea crear --nombre ... [--padre ID] [--fecha YYYY-MM-DD]` | escritura | dry-run → `--confirm`; `--padre` crea subtarea real; `--fecha` fija `date_deadline` (ISO) |
 | `tarea editar ID --set CAMPO=VALOR [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` reparenta |
 | `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
 | `chatter post ID --desde-archivo F.md [--link URL]` | escritura | dry-run → `--confirm`; las URLs del mensaje salen clicables |
 | `chatter adjuntar ID --archivo RUTA [--archivo ...] [--mensaje]` | escritura | sube imágenes de la tarea al chatter; dry-run → `--confirm` |
-| `horas registrar ID --horas X --nota "..."` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo |
+| `horas registrar ID --horas X --nota "..." [--fecha YYYY-MM-DD]` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo; `--fecha` fija el `date` real del parte (ISO) |
 | `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) |
 | `horas ajustar ID --horas X [--nota]` | escritura | dry-run → `--confirm`; whitelist `name`/`unit_amount` |
 | `ticket vincular ID --ticket N` | escritura | dry-run → `--confirm` |
@@ -151,6 +151,17 @@ aunque el texto de la descripción no lo sea.
 3. Sube con `chatter adjuntar ID --archivo RUTA --archivo ... [--mensaje ...]`
    (dry-run → mostrar → `--confirm`). Solo imágenes
    (PNG, JPG, GIF, WEBP, BMP, SVG), cada archivo ≤ 20 MB.
+
+## Fechar tareas y partes de horas (FASE 17)
+Cuando se trabaja un día y el parte/la tarea va a aparecer con la fecha de hoy
+(o no se refleja en el día real), usa `--fecha YYYY-MM-DD` (ISO):
+- `tarea crear --nombre "[FEAT] …" --fecha 2026-09-11` → fija `date_deadline`
+  a la fecha indicada. No intentes retro-fechar `create_date`: Odoo no lo
+  permite (ORM) y `--fecha` usa el único campo de fecha editable de la tarea.
+- `horas registrar <ID> --horas X --nota "…" --fecha 2026-09-11` → el parte
+  queda en el día real del trabajo (campo `date` de la línea de timesheet).
+- Sin `--fecha` el comportamiento no cambia (hoy). La fecha se valida antes de
+  contactar con Odoo (ISO + calendario real; `2026-02-30` da error claro).
 
 ## Modo robusto (conexión intermitente)
 Cuando el host de Odoo tarda o cae, no te rindas al primer error: repite el

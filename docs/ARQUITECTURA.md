@@ -212,13 +212,13 @@ porque el ratio de desviación depende de quién estima.
 | `proyecto info` | lectura | datos, etapas y roles del proyecto |
 | `tarea get ID` | lectura | campos según config + chatter |
 | `tarea list` | lectura | filtros `--etapa --estado --padre --limite` |
-| `tarea crear --nombre ... [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` crea subtarea real |
+| `tarea crear --nombre ... [--padre ID] [--fecha YYYY-MM-DD]` | escritura | dry-run → `--confirm`; `--padre` crea subtarea real; `--fecha` fija `date_deadline` |
 | `tarea editar ID --set CAMPO=VALOR [--padre ID]` | escritura | dry-run → `--confirm`; `--padre` reparenta |
 | `tarea etapa ID --etapa NOMBRE` | escritura | dry-run → `--confirm` |
 | `tarea estado ID --estado ALIAS` | escritura | dry-run → `--confirm` |
 | `chatter post ID --desde-archivo F.md [--link URL]` | escritura | dry-run → `--confirm`; las URLs del mensaje salen clicables |
 | `chatter adjuntar ID --archivo RUTA [--archivo ...] [--mensaje]` | escritura | sube imágenes de la tarea al chatter; dry-run → `--confirm` |
-| `horas registrar ID --horas X --nota "..."` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo |
+| `horas registrar ID --horas X --nota "..." [--fecha YYYY-MM-DD]` | escritura | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo; `--fecha` fija el `date` real del parte |
 | `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) |
 | `horas ajustar ID --horas X [--nota]` | escritura | dry-run → `--confirm`; whitelist `name`/`unit_amount` |
 | `ticket vincular ID --ticket N` | escritura | dry-run → `--confirm` |
@@ -257,6 +257,15 @@ porque el ratio de desviación depende de quién estima.
 - La IA **solo sugiere** adjuntar capturas cuando aportan (revisión visual,
   pruebas); conversa qué imágenes/dónde y las sube por la ruta que indique el
   usuario.
+
+**Fechar tareas y partes de horas (FASE 17):** `tarea crear --fecha
+YYYY-MM-DD` fija `date_deadline` y `horas registrar --fecha YYYY-MM-DD` fija el
+`date` de la línea de timesheet; sin `--fecha` el comportamiento es hoy
+(100% retrocompatible). Fuera de alcance: NO se retro-fecha `create_date` de
+`project.task` (el ORM de Odoo no lo permite; contablemente incorrecto) —
+`date_deadline` es el único campo de fecha editable de la tarea.
+`validar_fecha_iso` valida formato ISO y fecha real de calendario **antes de
+contactar con Odoo** (fail-fast): rechaza `2026-02-30` con error claro.
 
 **Modo robusto para conexión intermitente (FASE 16):** cuando la instancia
 cae o va lenta, no se aborta al primer fallo si se arma el modo: `PADRE_ROBUSTO`
@@ -1030,10 +1039,10 @@ Instancias generadas desde plantillas. La calibración es **un archivo por model
 | `doctor [--proyecto ID]` | diagnóstico | detecta campos, modo horas, etapas, roles y el campo de subtarea; escribe config | 0, 1 |
 | `proyecto info` | lectura | datos, etapas y roles del proyecto | 0, 1 |
 | `tarea get ID` · `tarea list` | lectura | — | 0, 1 |
-| `tarea crear` · `editar` · `etapa` · `estado` | **escritura** | dry-run → `--confirm`; `crear/editar` admiten `--padre ID` (subtarea real) | 2, 0, 1 |
+| `tarea crear` · `editar` · `etapa` · `estado` | **escritura** | dry-run → `--confirm`; `crear/editar` admiten `--padre ID` (subtarea real); `crear --fecha` fija `date_deadline` (ISO) | 2, 0, 1 |
 | `chatter post ID --desde-archivo f.md [--link URL]` | **escritura** | dry-run → `--confirm`; URLs del mensaje clicables | 2, 0, 1 |
 | `chatter adjuntar ID --archivo RUTA [--mensaje]` | **escritura** | dry-run → `--confirm`; solo imágenes ≤20 MB; whitelist `name/datas/type/res_model/res_id/mimetype` | 2, 0, 1 |
-| `horas registrar ID --horas X --nota "..."` | **escritura** | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo | 2, 0, 1 |
+| `horas registrar ID --horas X --nota "..." [--fecha YYYY-MM-DD]` | **escritura** | dry-run → `--confirm`; la nota describe en lenguaje natural qué se estaba haciendo; `--fecha` fija el `date` del parte | 2, 0, 1 |
 | `horas list ID` | lectura | líneas de timesheet de la tarea (id, horas, nota, fecha) | 0, 1 |
 | `horas ajustar ID --horas X [--nota]` | **escritura** | dry-run → `--confirm`; whitelist `name`/`unit_amount` | 2, 0, 1 |
 | `ticket vincular ID --ticket N` | **escritura** | dry-run → `--confirm` | 2, 0, 1 |

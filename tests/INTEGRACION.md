@@ -60,6 +60,7 @@ Ejecutar: `python -m unittest tests/test_odoo_sync.py -v`
 | 2.24 | `chatter post 61 --link https://…` sin confirm → confirm | exit 2 con `enlaces:[...]`; confirm → mensaje con `<a href>` clicable | URL visible como recurso en el chatter | 🧪 N1 101/101 🟢 · pendiente ejecución en vivo |
 | 2.25 | `chatter adjuntar 61 --archivo captura.png` sin confirm → confirm · error con .txt y con >20 MB | exit 2 con `archivos` (ruta/formato/mime/bytes); confirm → adjunto en chatter; exit 1 claro | Imagen subida + visible (recursos de la tarea) | 🧪 N1 101/101 🟢 · pendiente ejecución en vivo |
 | 2.26 | `tarea list 61` con `app.yafexsrl.com` cortado: `--robusto` (→ OK en un reconto) · `--reintentos 2` (agota → exit 1 claro) · `--reintentos ilimitado` sin `--tiempo-total` (error en arranque) → con `--tiempo-total 60` | stderr anuncia cada reintento; JSON final con `reintentos` (config/usados/duración); exit 1 tras agotar; error «ilimitados» si no hay limitante | La operación sobrevive a cortes breves de red sin duplicar escrituras | 🧪 N1 118/118 🟢 · autocrítico esperado: simular un corte de red local |
+| 2.27 | `horas registrar 61 --horas 0.25 --nota "prueba" --fecha 2026-09-11` sin confirm → confirm · `tarea crear --nombre "[CHK] Fecha" --fecha 2026-09-10` sin confirm → confirm · `--fecha 2026-02-30` | exit 2 con `date_deadline`/`date` en la propuesta; confirm → el parte queda en 2026-09-11 y la tarea con límite 2026-09-10; exit 1 claro con error ISO | `horas list` muestra fecha 2026-09-11; tarea creada con deadline 2026-09-10 | 🧪 N1 123/123 🟢 · pendiente ejecución en vivo |
 
 **Resultado F10:** 18/18 en verde — ejecutado con `.ia/` recreado desde cero
 (config, calibración y log borrados; `.env` conservado) y config regenerado
@@ -109,6 +110,15 @@ fallos de **conexión** (`CONEXION_ERRORES`), nunca un `xmlrpc.Fault` (rechazo
 lógico — no se duplican escrituras). Progreso por stderr y resumen `reintentos`
 en el JSON final. N1 **118/118** 🟢 (17 tests nuevos: `TestModoRobusto`);
 2.26 🧪 pendiente de ejecución con corte controlado.
+
+**Fechar tareas y partes de horas (FASE 17, F17-T2):** propuesta traída del
+proyecto Contratos B2B (#16, Odoo18-Server03): trabajar un día no debe dejar
+tareas/partes con fecha de hoy. `tarea crear --fecha YYYY-MM-DD` fija
+`date_deadline` y `horas registrar --fecha` fija el `date` de la línea de
+timesheet; `validar_fecha_iso` rechaza formatos/fechas de calendario
+imposibles **antes de conectar** (fail-fast)→exit 1 claro. No-alcance:
+`create_date` no es retro-fechable por ORM. N1 **123/123** 🟢 (10 tests
+nuevos: `TestFecha` con `_FakeOdoo`); 2.27 🧪 pendiente de ejecución en vivo.
 
 ## Nivel 3 — Comportamiento de la IA (Fase 11)
 

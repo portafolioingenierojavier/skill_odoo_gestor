@@ -17,7 +17,7 @@
 
 [![estado](https://img.shields.io/badge/estado-en_desarrollo_activo-22C55E?style=for-the-badge)](#)
 [![dependencias](https://img.shields.io/badge/dependencias-0-22C55E?style=for-the-badge)](#)
-[![unit tests](https://img.shields.io/badge/unit_tests-N1_118%2F118-22C55E?style=for-the-badge)](#)
+[![unit tests](https://img.shields.io/badge/unit_tests-N1_123%2F123-22C55E?style=for-the-badge)](#)
 [![escrituras](https://img.shields.io/badge/escrituras-2_fases-7B2FBE?style=for-the-badge)](#)
 [![diseño](https://img.shields.io/badge/dise%C3%B1o-v1.0_aprobado-4CC9F0?style=for-the-badge)](#)
 
@@ -385,6 +385,10 @@ estado en 3 líneas y confirma qué tarea se retoma.
   intermitente** — `--robusto`/`--reintentos`/`--tiempo-total`/`--espera` en
   los 18 subcomandos; condición de parada obligatoria y solo reintenta fallos
   de conexión; resumen `reintentos` en el JSON; N1 **118/118**
+- [x] **Ampliación aprobada (1.0.0-rc10): fechar tareas y partes de horas** —
+  `tarea crear --fecha YYYY-MM-DD` (→ `date_deadline`) y `horas registrar
+  --fecha` (→ `date` del parte); validación ISO + calendario antes de
+  conectar; N1 **123/123**
 - [ ] Fase 12 — **Estreno en el proyecto real + DoD global (G12)**: F12-T1
   completado en **Cognitia** (Odoo 18 remoto · proyecto #15 · `config.json` y
   roles reales · API key con vencimiento 2026-12-11 registrado) · F12-T2

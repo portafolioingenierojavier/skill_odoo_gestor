@@ -1277,6 +1277,138 @@ class TestModoRobusto(unittest.TestCase):
         datos = json.loads(salida.getvalue())
         self.assertEqual(datos["reintentos"]["reintentos_realizados"], 2)
         self.assertEqual(datos["reintentos"]["config"]["reintentos"], 3)
+
+
+class TestFecha(unittest.TestCase):
+    """FASE 17 (rc10): --fecha ISO en tarea crear y horas registrar."""
+
+    def pena(self, mod):
+        capturado = {}
+        original = mod.error
+
+        def fake_error(men, det="", **kw):
+            capturado["mensaje"] = men
+            raise SystemExit(1)
+        mod.error = fake_error
+        return capturado, original
+
+    def test_parser_tarea_crear_acepta_fecha(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["tarea", "crear", "--nombre", "[FEAT] X", "--fecha", "2026-09-11"])
+        self.assertEqual(args.fecha, "2026-09-11")
+
+    def test_parser_horas_registrar_acepta_fecha(self):
+        mod = cargar_modulo()
+        args = mod.construir_parser().parse_args(
+            ["horas", "registrar", "5", "--horas", "1.75",
+             "--fecha", "2026-09-11"])
+        self.assertEqual(args.fecha, "2026-09-11")
+
+    def test_parser_no_acepta_fecha_en_otros(self):
+        mod = cargar_modulo()
+        for argv in (["tarea", "get", "5", "--fecha", "2026-09-11"],
+                     ["horas", "list", "5", "--fecha", "2026-09-11"],
+                     ["horas", "ajustar", "5", "--horas", "1",
+                      "--fecha", "2026-09-11"]):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit):
+                mod.construir_parser().parse_args(argv)
+
+    def test_validar_fecha_iso_validas(self):
+        mod = cargar_modulo()
+        self.assertEqual(mod.validar_fecha_iso("2026-09-11"), "2026-09-11")
+        self.assertEqual(mod.validar_fecha_iso("2026-12-31"), "2026-12-31")
+        self.assertEqual(mod.validar_fecha_iso("2000-02-29"), "2000-02-29")
+
+    def test_validar_fecha_iso_invalidas(self):
+        mod = cargar_modulo()
+        for mala in ("2026-2-11", "26-09-11", "2026/09/11", "2026-02-30",
+                     "2026-13-01", "2026-00-10", "2026-09-11T00:00:00",
+                     "abc", "", "   "):
+            with self.subTest(mala=mala):
+                capturado, original = self.pena(mod)
+                try:
+                    with self.assertRaises(SystemExit):
+                        mod.validar_fecha_iso(mala)
+                finally:
+                    mod.error = original
+                self.assertIn("--fecha", capturado["mensaje"])
+
+    def probar_cmd(self, mod, cmd, args, cfg):
+        fake = _FakeOdoo()
+        mod.conexion_y_config = lambda: (fake, dict(cfg))
+        mod.registrar_actividad = lambda *a, **k: None
+        with contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                cmd(args)
+        return fake.escrituras
+
+    def test_tarea_crear_fecha_setea_date_deadline(self):
+        mod = cargar_modulo()
+        args = types.SimpleNamespace(nombre="[FEAT] X", descripcion=None,
+                                     horas=None, fecha="2026-09-11",
+                                     etapa=None, padre=None, confirm=True)
+        escrituras = self.probar_cmd(mod, mod.cmd_tarea_crear, args,
+                                     {"proyecto_id": 15})
+        vals = escrituras[0][2][0][0]
+        self.assertEqual(vals["date_deadline"], "2026-09-11")
+
+    def test_tarea_crear_sin_fecha_no_pone_date_deadline(self):
+        mod = cargar_modulo()
+        args = types.SimpleNamespace(nombre="[FEAT] X", descripcion=None,
+                                     horas=None, fecha=None, etapa=None,
+                                     padre=None, confirm=True)
+        escrituras = self.probar_cmd(mod, mod.cmd_tarea_crear, args,
+                                     {"proyecto_id": 15})
+        vals = escrituras[0][2][0][0]
+        self.assertNotIn("date_deadline", vals)
+
+    def test_horas_registrar_fecha_setea_date(self):
+        mod = cargar_modulo()
+        args = types.SimpleNamespace(id=5, horas=1.75, nota="N",
+                                     fecha="2026-09-11", confirm=True)
+        escrituras = self.probar_cmd(mod, mod.cmd_horas, args,
+                                     {"proyecto_id": 15, "modo_horas": "timesheet"})
+        vals = escrituras[0][2][0][0]
+        self.assertEqual(vals["date"], "2026-09-11")
+
+    def test_horas_registrar_sin_fecha_no_pone_date(self):
+        mod = cargar_modulo()
+        args = types.SimpleNamespace(id=5, horas=1.75, nota="N",
+                                     fecha=None, confirm=True)
+        escrituras = self.probar_cmd(mod, mod.cmd_horas, args,
+                                     {"proyecto_id": 15, "modo_horas": "timesheet"})
+        vals = escrituras[0][2][0][0]
+        self.assertNotIn("date", vals)
+
+    def test_tarea_crear_fecha_invalida_error_claro(self):
+        mod = cargar_modulo()
+        args = types.SimpleNamespace(nombre="[FEAT] X", descripcion=None,
+                                     horas=None, fecha="2026-02-30",
+                                     etapa=None, padre=None, confirm=True)
+        capturado, original = self.pena(mod)
+        try:
+            with self.assertRaises(SystemExit):
+                mod.cmd_tarea_crear(args)
+        finally:
+            mod.error = original
+        self.assertIn("--fecha", capturado["mensaje"])
+
+
+class _FakeOdoo:
+    uid = 2
+
+    def __init__(self):
+        self.escrituras = []
+
+    def buscar(self, modelo, dominio, campos, limite=100, orden=None):
+        return [{"id": 21, "name": "IA Sync"}]
+
+    def ejec(self, modelo, metodo, *a, **k):
+        self.escrituras.append((modelo, metodo, a, k))
+        return 123
+
+
     """F9-T2: coherencia plantillas ↔ parser ↔ SKILL.md."""
 
     RAIZ = AQUI.parent

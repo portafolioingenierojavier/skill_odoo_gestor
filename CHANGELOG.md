@@ -2,6 +2,31 @@
 
 Formato: [Keep a Changelog](https://keepachangelog.com/es/1.1.0/)
 
+## [1.0.0-rc10] — 2026-09-11
+
+### Añadido
+- **Fechar tareas y partes de horas** `--fecha YYYY-MM-DD` (petición traída
+  desde el proyecto Contratos B2B #16: el trabajo hecho un día debe reflejarse
+  con la fecha real, no hoy):
+  - `tarea crear --fecha 2026-09-11` → fija `date_deadline`; `horas registrar
+    --fecha 2026-09-11` → fija el `date` de la línea de timesheet. Sin
+    `--fecha` el comportamiento actual no cambia (retrocompatible con
+    Cognitia y el resto de proyectos).
+  - `validar_fecha_iso` (nuevo): formato ISO + fecha real de calendario,
+    validado **antes de contactar con Odoo** (fail-fast): `2026-02-30`,
+    `2026-13-01`, `2026/09/11` → error claro, exit 1.
+  - Decisión documentada: NO se retro-fecha `create_date` de `project.task`
+    (el ORM de Odoo no lo permite); `date_deadline` es el único campo de
+    fecha editable de la tarea. Alcance acordado con el usuario: solo
+    `tarea crear` y `horas registrar`.
+- Verificado: N1 **123/123** en verde (10 tests nuevos en `TestFecha`, con
+  `_FakeOdoo` sin red: parser, validación válidas/inválidas, `cmd_tarea_crear`
+  y `cmd_horas` con y sin `--fecha`, error claro) + índice 18/18.
+  N2 caso 2.27 añadido.
+- Docs actualizadas: SKILL.md (sección «Fechar tareas y partes de horas»),
+  ARQUITECTURA (tablas + bloque narrativo), README, ROADMAP Fase 17,
+  INTEGRACION.md.
+
 ## [1.0.0-rc9] — 2026-09-11
 
 ### Añadido
